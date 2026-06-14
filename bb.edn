@@ -1,0 +1,30 @@
+{:paths ["src" "resources" "spec"]
+
+ :deps {com.cleancoders.c3kit/apron {:mvn/version "3.0.0"}}
+
+ :tasks
+ {spec {:doc  "Run speclj specs (pass file/dir to narrow)"
+        :task (if (seq *command-line-args*)
+                (apply shell "clojure" "-M:spec" *command-line-args*)
+                (shell "clojure" "-M:spec"))}
+
+  ci   {:doc  "Run unit specs"
+        :task (shell "clojure" "-M:spec")}
+
+  lint {:doc      "Run clj-kondo lint (default: src spec; pass file/dir to narrow)"
+        :requires ([babashka.pods :as pods])
+        :task     (do
+                    (pods/load-pod 'clj-kondo/clj-kondo "2024.03.13")
+                    (let [run!    (requiring-resolve 'pod.borkdude.clj-kondo/run!)
+                          targets (if (seq *command-line-args*)
+                                    (vec *command-line-args*)
+                                    ["src" "spec"])
+                          result  (run! {:lint targets})
+                          {:keys [error warning]} (:summary result)]
+                      (doseq [{:keys [filename row col level message]} (:findings result)]
+                        (println (str filename ":" row ":" col ": " (name level) ": " message)))
+                      (println (format "lint: %d errors, %d warnings" error warning))
+                      (when (pos? error) (System/exit 1))))}
+
+  hooks:install {:doc  "Configure git to use repo-tracked hooks"
+                 :task (shell "git" "config" "core.hooksPath" ".githooks")}}}

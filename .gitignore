@@ -1,0 +1,10 @@
+*.class
+*.iml
+*.jar
+.cpcache/
+.DS_Store
+.idea/
+.lsp/
+.specljs-timestamp
+/target
+/tmp

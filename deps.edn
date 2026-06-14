@@ -1,0 +1,11 @@
+{:paths ["src" "resources"]
+
+ :deps {io.github.slagyr/isaac-foundation {:local/root "../isaac-foundation"}
+        io.github.slagyr/isaac-agent        {:local/root "../isaac-agent"}}
+
+ :aliases
+ {:spec {:extra-paths ["spec"]
+         :extra-deps  {io.github.slagyr/isaac-foundation-test-support {:local/root "../isaac-foundation/spec-support"}
+                       speclj/speclj                                  {:mvn/version "3.13.0"}
+                       babashka/process                               {:mvn/version "0.5.22"}}
+         :main-opts   ["-m" "speclj.main" "-c" "-D" "spec"]}}}
