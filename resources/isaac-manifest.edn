@@ -26,8 +26,4 @@
       :expr {:type :string, :description "5-field cron expression"},
       :prompt
       {:type :string,
-       :description "Prompt sent when the cron job fires"}}}}},
-  :tz
-  {:schema
-   {:type :string,
-    :description "IANA timezone name for cron evaluation"}}}}
+       :description "Prompt sent when the cron job fires"}}}}}}}}

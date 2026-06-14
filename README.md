@@ -1,7 +1,8 @@
 # Isaac Cron
 
 Scheduled crew turns for Isaac. Builtin module `:isaac.cron` contributes
-`:cron` and `:tz` config schema; `isaac.cron.service` registers jobs on
+`:cron` config schema; `isaac.cron.service` reads root `:tz` (owned by
+isaac-foundation) and registers jobs on
 the shared nexus `:scheduler` and dispatches turns through the agent bridge.
 
 Depends on [isaac-foundation](https://github.com/slagyr/isaac-foundation)
