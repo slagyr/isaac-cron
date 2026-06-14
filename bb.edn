@@ -8,8 +8,14 @@
                 (apply shell "clojure" "-M:spec" *command-line-args*)
                 (shell "clojure" "-M:spec"))}
 
-  ci   {:doc  "Run unit specs"
-        :task (shell "clojure" "-M:spec")}
+  ci       {:doc  "Run unit specs + acceptance features"
+            :task (do (shell "clojure" "-M:spec")
+                      (shell "clojure" "-M:features"))}
+
+  features {:doc  "Run gherclj feature specs (excludes @slow and @wip)"
+            :task (do
+                    (babashka.fs/delete-tree "target")
+                    (apply shell "clojure" "-M:features" *command-line-args*))}
 
   lint {:doc      "Run clj-kondo lint (default: src spec; pass file/dir to narrow)"
         :requires ([babashka.pods :as pods])
