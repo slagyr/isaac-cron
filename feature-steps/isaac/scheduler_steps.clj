@@ -2,15 +2,21 @@
   (:require
     [clojure.string :as str]
     [gherclj.core :as g :refer [defgiven defthen defwhen helper!]]
+    [isaac.config.loader :as loader]
+    [isaac.cron.service :as cron-service]
+    [isaac.fs :as fs]
     [isaac.logger :as log]
+    [isaac.scheduler.cron :as cron]
     [isaac.scheduler.runtime :as scheduler]
     [isaac.server.app :as app]
     [isaac.server.server-steps :as server-steps]
+    [isaac.session.store.spi :as store]
     [isaac.spec-helper :as helper]
     [isaac.step-tables :as match]
     [isaac.nexus :as nexus])
   (:import
-    (java.time Instant OffsetDateTime)))
+    (java.time Instant OffsetDateTime ZonedDateTime)
+    (java.time.format DateTimeFormatter)))
 
 (helper! isaac.scheduler-steps)
 
@@ -141,6 +147,69 @@
 (defn scheduler-ticks []
   (scheduler/tick! (current-scheduler)))
 
+(def ^:private offset-formatter
+  (DateTimeFormatter/ofPattern "yyyy-MM-dd'T'HH:mm:ssZ"))
+
+(defn- cron-server-fs []
+  (or (g/get :mem-fs) (nexus/get :fs) (fs/real-fs)))
+
+(defn- with-cron-server-fs [f]
+  (nexus/-with-nested-nexus {:fs (cron-server-fs)} (f)))
+
+(defn- load-cron-server-config [root fs*]
+  (let [load!       #(:config (loader/load-config-result {:root root :fs fs*}))
+        entity-dir? #(with-cron-server-fs
+                       (fn []
+                         (seq (fs/children fs* (str root "/config/" %)))))
+        cfg         (load!)]
+    (if (and (or (entity-dir? "crew") (entity-dir? "models") (entity-dir? "providers"))
+             (empty? (or (:crew cfg) {}))
+             (empty? (or (:models cfg) {}))
+             (empty? (or (:providers cfg) {})))
+      (load!)
+      cfg)))
+
+(defn- scheduler-idle? [instance]
+  (every? (fn [task]
+            (and (nil? (:active-run task))
+                 (empty? (:pending-fire-ats task))))
+          (scheduler/list-tasks instance)))
+
+(defn- invoke-scheduled-cron-tasks! [scheduler now]
+  (doseq [{:keys [handler trigger]} (scheduler/list-tasks scheduler)]
+    (let [zone         (java.time.ZoneId/of (or (:zone trigger) (str (.getZone now))))
+          scheduled-at (cron/previous-fire-at (:expr trigger) now zone)]
+      (when scheduled-at
+        (handler {:scheduled-at (.toInstant scheduled-at)
+                  :now          (.toInstant now)})))))
+
+(defn scheduler-ticks-at [iso]
+  (g/assoc! :isaac-file-phase :assert)
+  (g/assoc! :runtime-root-dir (g/get :root))
+  (with-cron-server-fs
+    (fn []
+      (let [fs*        (cron-server-fs)
+            root       (g/get :root)
+            cfg        (merge (load-cron-server-config root fs*)
+                              (when-let [providers (g/get :provider-configs)]
+                                {:providers providers}))
+            now        (ZonedDateTime/parse iso offset-formatter)
+            scheduler* (scheduler/create {:clock (fn [] (.toInstant now))})]
+        (try
+          (nexus/-with-nexus {:config    (atom cfg)
+                              :scheduler scheduler*
+                              :root      root
+                              :fs        fs*
+                              :sessions  {:store (store/create root)}}
+            (let [runner (cron-service/start! {:cfg cfg :root root})]
+              (try
+                (invoke-scheduled-cron-tasks! scheduler* now)
+                (helper/await-condition #(scheduler-idle? scheduler*) 3000)
+                (finally
+                  (cron-service/stop! runner)))))
+          (finally
+            (scheduler/shutdown! scheduler*))))))
+
 (defn scheduler-stops []
   (scheduler/stop! (current-scheduler)))
 
@@ -227,6 +296,10 @@
 (defwhen "the clock advances to {string}" isaac.scheduler-steps/clock-advances-to)
 
 (defwhen "the scheduler ticks" isaac.scheduler-steps/scheduler-ticks)
+
+(defwhen #"the scheduler ticks at \"([^\"]+)\"" isaac.scheduler-steps/scheduler-ticks-at
+  "Schedules configured cron jobs on the shared scheduler, then invokes
+   their registered handlers at the given ISO timestamp.")
 
 (defwhen "the scheduler stops" isaac.scheduler-steps/scheduler-stops)
 
