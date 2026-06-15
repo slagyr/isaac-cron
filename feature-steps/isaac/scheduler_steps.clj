@@ -1,5 +1,6 @@
 (ns isaac.scheduler-steps
   (:require
+    [clojure.edn :as edn]
     [clojure.string :as str]
     [gherclj.core :as g :refer [defgiven defthen defwhen helper!]]
     [isaac.config.loader :as loader]
@@ -9,7 +10,6 @@
     [isaac.scheduler.cron :as cron]
     [isaac.scheduler.runtime :as scheduler]
     [isaac.server.app :as app]
-    [isaac.server.server-steps :as server-steps]
     [isaac.session.store.spi :as store]
     [isaac.spec-helper :as helper]
     [isaac.step-tables :as match]
@@ -111,6 +111,8 @@
     (nexus/register! [:scheduler] instance)))
 
 (defn- stop-scheduler! []
+  (when-let [runner (g/get :cron-runner)]
+    (cron-service/stop! runner))
   (when-let [instance (current-scheduler)]
     (scheduler/stop! instance))
   (app/stop!)
@@ -208,7 +210,7 @@
                 (finally
                   (cron-service/stop! runner)))))
           (finally
-            (scheduler/shutdown! scheduler*))))))
+            (scheduler/shutdown! scheduler*)))))))
 
 (defn scheduler-stops []
   (scheduler/stop! (current-scheduler)))
@@ -270,14 +272,63 @@
     (g/should (some? message))
     (g/should (re-find (re-pattern (unquote-string pattern)) message))))
 
+(defn- parse-state-value [value]
+  (cond
+    (re-matches #"-?\d+" value)        (parse-long value)
+    (= "true" (str/lower-case value))  true
+    (= "false" (str/lower-case value)) false
+    (or (str/starts-with? value "[")
+        (str/starts-with? value "{")
+        (str/starts-with? value ":")
+        (str/starts-with? value "\"")) (edn/read-string value)
+    :else value))
+
+(defn- get-by-dotted-path [m path]
+  (get-in m (mapv keyword (str/split path #"\."))))
+
 (defn isaac-system-started []
   (log/set-output! :memory)
   (log/clear-entries!)
   (g/assoc! :bind-server-port? false)
-  (server-steps/server-running))
+  (g/assoc! :runtime-root-dir (g/get :root))
+  (with-cron-server-fs
+    (fn []
+      (let [fs*        (cron-server-fs)
+            root       (g/get :root)
+            cfg        (merge (load-cron-server-config root fs*)
+                              (when-let [providers (g/get :provider-configs)]
+                                {:providers providers}))
+            scheduler* (-> (scheduler/create {}) scheduler/start!)]
+        (g/assoc! :scheduler scheduler*)
+        (nexus/-with-nexus {:config    (atom cfg)
+                            :scheduler scheduler*
+                            :root      root
+                            :fs        fs*
+                            :sessions  {:store (store/create root)}}
+          (let [runner (cron-service/start! {:cfg cfg :root root})]
+            (g/assoc! :cron-runner runner)))))))
 
 (defn isaac-system-stopped []
   (app/stop!))
+
+(defn cron-job-has [name table]
+  (let [result* (atom nil)]
+    (helper/await-condition
+      (fn []
+        (when-let [instance (nexus/get-in [:cron])]
+          (when-let [state (cron-service/job-state instance name)]
+            (let [rows  (map #(zipmap (:headers table) %) (:rows table))
+                  fails (keep (fn [row]
+                                (let [path     (get row "path")
+                                      expected (parse-state-value (get row "value"))
+                                      actual   (get-by-dotted-path state path)]
+                                  (when-not (= expected actual)
+                                    [path expected actual])))
+                              rows)]
+              (reset! result* fails)
+              (empty? fails)))))
+      3000)
+    (g/should= [] @result*)))
 
 (defn scheduler-running []
   (g/should (scheduler/running? (current-scheduler))))
@@ -349,3 +400,5 @@
 (defthen "the scheduler is running" isaac.scheduler-steps/scheduler-running)
 
 (defthen "the scheduler is not running" isaac.scheduler-steps/scheduler-not-running)
+
+(defthen "the cron job {string} has:" isaac.scheduler-steps/cron-job-has)
