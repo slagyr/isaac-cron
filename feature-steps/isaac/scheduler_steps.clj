@@ -311,6 +311,9 @@
 (defn isaac-system-stopped []
   (app/stop!))
 
+(defn cron-config-is [table]
+  ((requiring-resolve 'isaac.session.session-steps/config-applied) table))
+
 (defn cron-job-has [name table]
   (let [result* (atom nil)]
     (helper/await-condition
@@ -365,6 +368,10 @@
 (defwhen "the Isaac system is started" isaac.scheduler-steps/isaac-system-started)
 
 (defwhen "the Isaac system is stopped" isaac.scheduler-steps/isaac-system-stopped)
+
+(defwhen "cron config is:" isaac.scheduler-steps/cron-config-is
+  "Applies a config table update before a scheduler tick so cron jobs
+   observe the rewritten prompt on the next fire.")
 
 (defthen "handler {string} has fired {int} times" isaac.scheduler-steps/handler-fired)
 

@@ -1,21 +1,23 @@
 Feature: Cron config hot reload
-  A running config harness updates cron job state when the config
-  slice changes at runtime.
+  Cron jobs read the current on-disk config when a scheduled fire runs,
+  so prompt changes written before the tick are picked up without a
+  server restart.
 
   Background:
     Given default Grover setup
 
-  @wip
   Scenario: Cron prompt content change is picked up at runtime
-    Given the isaac config path "cron.evening-plan.expr" is "0 21 * * *"
-    And the isaac config path "sessions.naming-strategy" is "sequential"
-    And the isaac config path "cron.evening-plan.crew" is "main"
-    And the isaac config path "cron.evening-plan.prompt" is "What are we going to do tonight, Brain?"
-    And the Isaac config harness is started
+    Given config:
+      | tz                       | America/Chicago                         |
+      | sessions.naming-strategy | sequential                              |
+      | cron.evening-plan.expr   | 0 21 * * *                              |
+      | cron.evening-plan.crew   | main                                    |
+      | cron.evening-plan.prompt | What are we going to do tonight, Brain? |
     And the following model responses are queued:
       | type | content | model |
       | text | Narf!   | echo  |
-    When the isaac config path "cron.evening-plan.prompt" is "Same thing we do every night, Pinky — try to take over the world."
+    When cron config is:
+      | cron.evening-plan.prompt | Same thing we do every night, Pinky — try to take over the world. |
     And the scheduler ticks at "2026-04-21T21:00:00-0500"
     Then session "session-1" has transcript matching:
       | type    | message.role | message.content                                                    |
