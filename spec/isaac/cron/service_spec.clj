@@ -30,7 +30,7 @@
         (with-redefs [sut/start! (fn [opts]
                                    (reset! started opts)
                                    ::runner)]
-          (runtime/on-startup! module {"health-check" {:expr "0 9 * * *"}})
+          (runtime/on-load module {"health-check" {:expr "0 9 * * *"}})
           (should= {:cfg (or (loader/snapshot "spec") {}) :root "/test/isaac"}
                    @started))))
 
@@ -43,7 +43,7 @@
                                    (keyword (str "runner-" (count @started))))
                       sut/stop!  (fn [runner]
                                    (swap! stopped conj runner))]
-          (runtime/on-startup! module {"alpha" {:expr "0 9 * * *"}})
+          (runtime/on-load module {"alpha" {:expr "0 9 * * *"}})
           (runtime/on-config-change! module
            {"alpha" {:expr "0 9 * * *"}}
            {"alpha" {:expr "0 10 * * *"}})
@@ -56,7 +56,7 @@
         (with-redefs [sut/start! (fn [_] ::runner)
                       sut/stop!  (fn [runner]
                                    (reset! stopped runner))]
-          (runtime/on-startup! module {"alpha" {:expr "0 9 * * *"}})
+          (runtime/on-load module {"alpha" {:expr "0 9 * * *"}})
           (runtime/on-config-change! module
            {"alpha" {:expr "0 9 * * *"}}
            nil)
@@ -72,7 +72,7 @@
                                    ::runner)
                       sut/stop!  (fn [_]
                                    (swap! stopped inc))]
-          (runtime/on-startup! module slice)
+          (runtime/on-load module slice)
            (runtime/on-config-change! module slice slice)
            (should= 1 @started)
            (should= 0 @stopped)))))

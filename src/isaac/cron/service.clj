@@ -28,7 +28,7 @@
 
 (deftype CronModule [root config* runner*]
   reconfigurable/Reconfigurable
-  (on-startup! [_ slice]
+  (on-load [_ slice]
     (reset! config* (or slice {}))
     (when (seq slice)
       (reset! runner* (start! {:cfg (or (loader/snapshot "cron reconcile lifecycle — ambient config at boundary") {}) :root root}))))
@@ -40,6 +40,11 @@
       (reset! config* (or new-slice {}))
       (when (seq new-slice)
         (reset! runner* (start! {:cfg (or (loader/snapshot "cron reconcile lifecycle — ambient config at boundary") {}) :root root})))))
+  (on-unload [_ _slice]
+    (when-let [runner @runner*]
+      (stop! runner))
+    (reset! runner* nil)
+    (reset! config* {}))
   Object
   (toString [_] "CronModule"))
 
