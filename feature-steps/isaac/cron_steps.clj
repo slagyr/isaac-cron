@@ -87,7 +87,6 @@
 (after-scenario stop-cron-scenario!)
 
 (defn scheduler-ticks-at [iso]
-  (g/assoc! :isaac-file-phase :assert)
   (g/assoc! :runtime-root-dir (g/get :root))
   (with-cron-server-fs
     (fn []
