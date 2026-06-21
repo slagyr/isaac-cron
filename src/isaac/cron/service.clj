@@ -1,8 +1,10 @@
 ;; mutation-tested: 2026-05-06
 (ns isaac.cron.service
   (:require
+    [clojure.string :as str]
     [isaac.bridge.core :as bridge]
     [isaac.charge :as charge]
+    [isaac.comm.delivery.queue :as delivery-queue]
     [isaac.comm.null :as null-comm]
     [isaac.config.loader :as loader]
     [isaac.reconfigurable :as reconfigurable]
@@ -83,7 +85,21 @@
     now (ZonedDateTime/ofInstant now zone)
     :else (ZonedDateTime/ofInstant (memory/now) zone)))
 
-(defn- fire-job! [ctx cfg job-name {:keys [crew prompt]} scheduled-at]
+(defn- turn-content [result]
+  (or (get-in result [:response :message :content])
+      (get-in result [:message :content])
+      (:content result)
+      ""))
+
+(defn- maybe-enqueue-delivery! [{:keys [comm to]} result]
+  (when (and comm to (not (:error result)))
+    (when-let [content (not-empty (str/trim (turn-content result)))]
+      (delivery-queue/enqueue! {:comm    comm
+                                :target  to
+                                :to      to
+                                :content content}))))
+
+(defn- fire-job! [ctx cfg job-name {:keys [crew prompt comm to]} scheduled-at]
   (let [root      (:root ctx)
         session-store* (or (:session-store ctx) (nexus/get-in [:sessions :store]))
         session        (session-ctx/create-with-resolved-behavior!
@@ -101,6 +117,7 @@
                                           :guidance      cron-guidance
                                           :origin        {:kind :cron :name (str job-name)}
                                           :comm          null-comm/channel})))
+        _              (maybe-enqueue-delivery! {:comm comm :to to} result)
         failed?   (boolean (:error result))]
     (state/write-job-state! root job-name {:last-run    (cron/format-zoned-date-time scheduled-at)
                                                 :last-status (if failed? :failed :succeeded)

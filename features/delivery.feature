@@ -1,4 +1,3 @@
-@wip
 Feature: Cron delivery to a comm
   A cron entry may address a comm + recipient; its session output is
   delivered through that comm. With no comm target, output is discarded
@@ -9,6 +8,9 @@ Feature: Cron delivery to a comm
 
   Scenario: a cron addressed to a comm delivers its report through that comm
     Given config:
+      | tz                       | America/Chicago                     |
+      | sessions.naming-strategy | sequential                          |
+      | comms.longwave.type      | longwave                            |
       | cron.watch-report.expr   | 0 6 * * *                           |
       | cron.watch-report.crew   | main                                |
       | cron.watch-report.prompt | File the dawn watch for the bridge. |
@@ -25,9 +27,11 @@ Feature: Cron delivery to a comm
 
   Scenario: an untargeted cron runs but enqueues no delivery (skybeam/null default)
     Given config:
-      | cron.hull-check.expr   | 0 13 * * *                    |
-      | cron.hull-check.crew   | main                          |
-      | cron.hull-check.prompt | Tally the hull stress gauges. |
+      | tz                       | America/Chicago               |
+      | sessions.naming-strategy | sequential                    |
+      | cron.hull-check.expr     | 0 13 * * *                    |
+      | cron.hull-check.crew     | main                          |
+      | cron.hull-check.prompt   | Tally the hull stress gauges. |
     And the following model responses are queued:
       | type | content                       | model |
       | text | Hull nominal; rivets holding. | echo  |

@@ -4,11 +4,12 @@
         io.github.slagyr/isaac-foundation {:git/url "https://github.com/slagyr/isaac-foundation.git"
                                           :git/sha "305c337a69427cebbd2ae5471ac6684f0ae321a5"}
         io.github.slagyr/isaac-agent {:git/url "https://github.com/slagyr/isaac-agent.git"
-                                          :git/sha "4abb96bca71a95d953b15e05a2736e4f2e4a61f9"}
+                                          :git/sha "151330ad041a8ec23e9d7e437fa3df7d2e18e177"}
         }
 
  :aliases
  {:dev-local {:override-deps {io.github.slagyr/isaac-agent                {:local/root "../isaac-agent"}
+                               io.github.slagyr/isaac-agent-spec           {:local/root "../isaac-agent/spec"}
                                io.github.slagyr/isaac-foundation           {:local/root "../isaac-foundation"}
                                io.github.slagyr/isaac-foundation-spec      {:local/root "../isaac-foundation/spec"}
                                io.github.slagyr/isaac-foundation-test-support {:local/root "../isaac-foundation/spec-support"}
@@ -22,7 +23,7 @@
                                                                        :git/tag "v0.1.2" :git/sha "305c337a69427cebbd2ae5471ac6684f0ae321a5"
                                                                        :deps/root "spec-support"}
                        io.github.slagyr/isaac-agent-spec              {:git/url "https://github.com/slagyr/isaac-agent.git"
-                                                                       :git/tag "v0.1.1" :git/sha "b342e4193fff751d5bc458ce90bc974873b59a0d"
+                                                                       :git/sha "151330ad041a8ec23e9d7e437fa3df7d2e18e177"
                                                                        :deps/root "spec"}
                        io.github.slagyr/isaac-server                  {:git/url "https://github.com/slagyr/isaac-server.git"
                                                                        :git/tag "v0.1.2" :git/sha "ba30caa2c2dc4564a352ae82742d39739fad9744"}
@@ -38,7 +39,7 @@
                                                                         :git/tag "v0.1.2" :git/sha "305c337a69427cebbd2ae5471ac6684f0ae321a5"
                                                                         :deps/root "spec"}
                            io.github.slagyr/isaac-agent-spec            {:git/url "https://github.com/slagyr/isaac-agent.git"
-                                                                        :git/tag "v0.1.1" :git/sha "b342e4193fff751d5bc458ce90bc974873b59a0d"
+                                                                        :git/sha "151330ad041a8ec23e9d7e437fa3df7d2e18e177"
                                                                         :deps/root "spec"}
                            speclj/speclj                                {:mvn/version "3.13.0"}
                            babashka/process                             {:mvn/version "0.5.22"}

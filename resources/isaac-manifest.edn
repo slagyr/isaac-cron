@@ -26,4 +26,11 @@
       :expr {:type :string, :description "5-field cron expression"},
       :prompt
       {:type :string,
-       :description "Prompt sent when the cron job fires"}}}}}}}}
+       :description "Prompt sent when the cron job fires"},
+      :comm
+      {:type :string,
+       :description "Comm to deliver the job's response through (optional)",
+       :validations [[:nil-or? [:registered-in? :isaac.server/comm [:comms]]]]},
+      :to
+      {:type :string,
+       :description "Recipient on the target comm (required when :comm is set)"}}}}}}}}
