@@ -167,7 +167,7 @@
         (reload-cron-after-config-change! file-path)))))
 
 (defn config-applied [table]
-  ((requiring-resolve 'isaac.session.session-steps/config-applied) table))
+  ((requiring-resolve 'isaac.foundation.harness-config-steps/config-applied) table))
 
 (defn cron-config-is [table]
   (config-applied table))
