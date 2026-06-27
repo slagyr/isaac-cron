@@ -33,4 +33,36 @@
        :validations [[:nil-or? [:registered-in? :isaac.server/comm [:comms]]]]},
       :to
       {:type :string,
-       :description "Recipient on the target comm (required when :comm is set)"}}}}}}}}
+       :description "Recipient on the target comm (required when :comm is set)"},
+      ;; Session frequencies (selection + per-turn override). Mirrors
+      ;; isaac.session.frequencies/frequencies-schema so a cron job picks which
+      ;; session its scheduled prompt runs on (resume/most-recent/always-new)
+      ;; and may override crew/model/effort/context-mode for the turn.
+      :session
+      {:type :seq,
+       :description "Explicit session id(s); first is used",
+       :spec {:type :string}},
+      :session-tags
+      {:type :seq,
+       :description "Tags the target session must carry (AND)",
+       :spec {:type :keyword}},
+      :reach
+      {:type :keyword,
+       :description "How many sessions to target (:one for cron)",
+       :validations [[:one-of? :one :all]]},
+      :prefer
+      {:type :keyword,
+       :description "Multi-match tiebreak when :reach is :one",
+       :validations [[:one-of? :recent :oldest]]},
+      :create
+      {:type :keyword,
+       :description "Create policy: :never, :if-missing, or :always (cron default :always)",
+       :validations [[:one-of? :never :if-missing :always]]},
+      :with-crew
+      {:type :string, :description "Override crew for the scheduled turn"},
+      :with-model
+      {:type :string, :description "Override model for the scheduled turn"},
+      :with-effort
+      {:type :int, :description "Override effort for the scheduled turn"},
+      :with-context-mode
+      {:type :keyword, :description "Override context mode for the scheduled turn"}}}}}}}}

@@ -13,6 +13,8 @@
      [isaac.logger :as log]
      [isaac.scheduler.runtime :as scheduler]
      [isaac.session.context :as session-ctx]
+     [isaac.session.frequencies :as frequencies]
+     [isaac.session.store.spi :as store]
      [isaac.nexus :as nexus]
      [isaac.tool.memory :as memory])
   (:import
@@ -99,32 +101,70 @@
                                 :to      to
                                 :content content}))))
 
-(defn- fire-job! [ctx cfg job-name {:keys [crew prompt comm to]} scheduled-at]
-  (let [root      (:root ctx)
+(def ^:private frequency-keys
+  [:session :session-tags :crew :reach :prefer :create
+   :with-crew :with-model :with-effort :with-context-mode])
+
+(defn- job->frequencies [job]
+  ;; cron default is :always (fresh session per fire) — preserves the historical
+  ;; behavior; a job opts into resume/select via :create + :crew/:session/etc.
+  (merge {:create :always}
+         (select-keys job frequency-keys)))
+
+(defn- resolve-session-key!
+  "Resolve the cron job's frequencies to a concrete session key, creating one
+   (with crew/tags + :with-* overrides projected) when the policy calls for it.
+   Returns {:session-key id} or {:error ... :message ...}."
+  [ctx cfg job-name freq session-store*]
+  (let [root   (:root ctx)
+        target (frequencies/resolve-session-targets freq session-store*)]
+    (cond
+      (:error target) target
+
+      (:create? target)
+      (let [create-opts (merge {:config        (assoc cfg :root root)
+                                :root          root
+                                :origin        {:kind :cron :name (str job-name)}
+                                :session-store session-store*}
+                               (:create-identity target)
+                               (frequencies/behavioral-override freq))]
+        {:session-key (:id (session-ctx/create-with-resolved-behavior!
+                             (:session-key target) create-opts))})
+
+      :else {:session-key (:session-key target)})))
+
+(defn- fire-job! [ctx cfg job-name {:keys [crew prompt comm to] :as job} scheduled-at]
+  (let [root           (:root ctx)
         session-store* (or (:session-store ctx) (nexus/get-in [:sessions :store]))
-        session        (session-ctx/create-with-resolved-behavior!
-                         nil {:config        (assoc cfg :root root)
-                              :root     root
-                              :crew          crew
-                              :origin        {:kind :cron :name (str job-name)}
-                              :session-store session-store*})
-        result         (binding [memory/*now* (.toInstant scheduled-at)]
-                         (bridge/dispatch!
-                           (charge/build {:session-key   (:id session)
-                                          :input         prompt
-                                          :config        (assoc cfg :root root)
-                                          :crew          crew
-                                          :guidance      cron-guidance
-                                          :origin        {:kind :cron :name (str job-name)}
-                                          :comm          null-comm/channel})))
-        _              (maybe-enqueue-delivery! {:comm comm :to to} result)
-        failed?   (boolean (:error result))]
-    (state/write-job-state! root job-name {:last-run    (cron/format-zoned-date-time scheduled-at)
-                                                :last-status (if failed? :failed :succeeded)
-                                                :last-error  (when failed?
-                                                               (or (:message result)
-                                                                   (some-> (:error result) str)))})
-    result))
+        freq           (job->frequencies job)
+        resolved       (resolve-session-key! ctx cfg job-name freq session-store*)]
+    (if (:error resolved)
+      (do
+        (log/warn :cron/no-session :job (str job-name) :message (:message resolved))
+        (state/write-job-state! root job-name {:last-run    (cron/format-zoned-date-time scheduled-at)
+                                               :last-status :failed
+                                               :last-error  (:message resolved)})
+        resolved)
+      (let [session-key (:session-key resolved)
+            session     (store/get-session session-store* session-key)
+            result      (binding [memory/*now* (.toInstant scheduled-at)]
+                          (bridge/dispatch!
+                            (charge/build {:session-key    session-key
+                                           :input          prompt
+                                           :config         (assoc cfg :root root)
+                                           :crew           (or (:with-crew freq) (:crew session) crew)
+                                           :model-override (:with-model freq)
+                                           :guidance       cron-guidance
+                                           :origin         {:kind :cron :name (str job-name)}
+                                           :comm           null-comm/channel})))
+            _           (maybe-enqueue-delivery! {:comm comm :to to} result)
+            failed?     (boolean (:error result))]
+        (state/write-job-state! root job-name {:last-run    (cron/format-zoned-date-time scheduled-at)
+                                               :last-status (if failed? :failed :succeeded)
+                                               :last-error  (when failed?
+                                                              (or (:message result)
+                                                                  (some-> (:error result) str)))})
+        result))))
 
 (defn- handle-scheduled-job! [ctx cfg tick-ms job-name job {:keys [scheduled-at now]}]
   (let [zone          (zone-id cfg)

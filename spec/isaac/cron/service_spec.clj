@@ -119,7 +119,7 @@
                     bridge/dispatch!                           (fn [c]
                                                                  (reset! routed c)
                                                                  {})]
-        (#'sut/fire-job! {:root "/test/isaac"}
+        (#'sut/fire-job! {:root "/test/isaac" :session-store (store/create "/test/isaac")}
                          {:defaults {:crew "main"}}
                          "health-check"
                          {:crew "main" :prompt "Run the health checkin."}
@@ -137,7 +137,7 @@
                     delivery-queue/enqueue!                      (fn [record]
                                                                  (reset! enqueued record)
                                                                  record)]
-        (#'sut/fire-job! {:root "/test/isaac"}
+        (#'sut/fire-job! {:root "/test/isaac" :session-store (store/create "/test/isaac")}
                          {:defaults {:crew "main"}}
                          "watch-report"
                          {:crew   "main"
@@ -187,7 +187,7 @@
                     bridge/dispatch!                           (fn [_] {:message {:content "Hull nominal."}})
                     delivery-queue/enqueue!                      (fn [_]
                                                                  (reset! enqueued true))]
-        (#'sut/fire-job! {:root "/test/isaac"}
+        (#'sut/fire-job! {:root "/test/isaac" :session-store (store/create "/test/isaac")}
                          {:defaults {:crew "main"}}
                          "hull-check"
                          {:crew "main" :prompt "Tally the hull stress gauges."}
