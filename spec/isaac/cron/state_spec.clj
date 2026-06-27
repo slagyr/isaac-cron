@@ -38,7 +38,7 @@
                                 :last-error  nil}}
              (sut/read-state)))
 
-  (it "uses the installed runtime fs without binding fs/*fs*"
+  (it "uses the installed runtime fs without binding a thread-local fs"
     (let [mem (fs/mem-fs)]
       (nexus/-with-nexus {:root "/test/isaac" :fs mem}
         (sut/write-job-state! "health-check" {:last-status :succeeded})
