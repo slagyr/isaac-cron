@@ -5,7 +5,7 @@
  ;; ships bb.test-tasks under spec-support/src/bb/.
  ;;
  ;; Native bb.spec runs unit specs that load under babashka. Features and any
- ;; specs that pull isaac.server.app → clout/instaparse stay on jvm-*
+ ;; specs that pull isaac.http.app → clout/instaparse stay on jvm-*
  ;; (IHashEq protocol not in SCI). See bean isaac-dt9h.
  :deps {com.cleancoders.c3kit/apron {:mvn/version "3.0.0"}
         cheshire/cheshire {:mvn/version "5.13.0"}

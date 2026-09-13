@@ -12,7 +12,7 @@
     [isaac.nexus :as nexus]
     [isaac.scheduler.cron :as cron]
     [isaac.scheduler.runtime :as scheduler]
-    [isaac.server.app :as app]
+    [isaac.http.app :as app]
     [isaac.session.store.spi :as store]
     [isaac.spec-helper :as helper])
   (:import
