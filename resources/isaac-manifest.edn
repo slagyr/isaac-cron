@@ -30,7 +30,7 @@
       :comm
       {:type :string,
        :description "Comm to deliver the job's response through (optional)",
-       :validations [[:nil-or? [:registered-in? :isaac.server/comm [:comms]]]]},
+       :validations [[:nil-or? [:registered-in? :isaac.http/comm [:comms]]]]},
       :to
       {:type :string,
        :description "Recipient on the target comm (required when :comm is set)"},

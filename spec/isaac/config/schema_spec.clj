@@ -17,8 +17,8 @@
   (get-in (cron-schema) [:value-spec :schema]))
 
 (def ^:private comm-module-index
-  {:isaac.server {:manifest {:berths {:isaac.server/comm {:description "comms"}}}}
-   :isaac.agent  {:manifest {:isaac.server/comm {:longwave {}
+  {:isaac.http {:manifest {:berths {:isaac.http/comm {:description "comms"}}}}
+   :isaac.agent  {:manifest {:isaac.http/comm {:longwave {}
                                                   :skybeam  {}}}}})
 
 (describe "config schema"

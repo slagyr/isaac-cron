@@ -35,7 +35,7 @@ Sibling checkouts expected:
 plan/
   isaac-foundation/
   isaac-agent/
-  isaac-server/
+  isaac-http/
   isaac-cron/   # this repo
 ```
 
