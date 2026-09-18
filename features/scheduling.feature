@@ -89,3 +89,86 @@ Feature: Cron jobs
       {:tz "America/Chicago" :cron {}}
       """
     Then the scheduled tasks do not include "cron/nightly-cleanup"
+
+  # --- isaac-7ngj: cron must not record success for a turn that failed ------
+  # fire-job! derives :last-status from (:error result) only. A provider wall
+  # (:unavailable? true, no :error) and other non-error failures therefore
+  # write :succeeded. Success means: the turn ended with an assistant reply.
+
+  @wip
+  Scenario: a provider wall during a cron turn records failed with the reason (isaac-7ngj)
+    Given config:
+      | tz                       | America/Chicago         |
+      | sessions.naming-strategy | sequential              |
+      | cron.health-check.expr   | 0 9 * * *               |
+      | cron.health-check.crew   | main                    |
+      | cron.health-check.prompt | Run the health checkin. |
+    And the following model responses are queued:
+      | model | type       | status | retry-after |
+      | echo  | http-error | 429    | 60          |
+    When the scheduler ticks at "2026-04-21T09:00:00-0500"
+    Then the isaac file "cron.edn" EDN contains:
+      | path                     | value                       |
+      | health-check.last-run    | 2026-04-21T09:00:00-0500    |
+      | health-check.last-status | failed                      |
+      | health-check.last-error  | #"(?i).*(wall|unavailable|429).*" |
+    And the log has entries matching:
+      | level | event            | job          | outcome      |
+      | :warn | :cron/job-failed | health-check | :unavailable |
+
+  @wip
+  Scenario: a provider error during a cron turn records failed with the message (isaac-7ngj)
+    Given config:
+      | tz                       | America/Chicago         |
+      | sessions.naming-strategy | sequential              |
+      | cron.health-check.expr   | 0 9 * * *               |
+      | cron.health-check.crew   | main                    |
+      | cron.health-check.prompt | Run the health checkin. |
+    And the following model responses are queued:
+      | type  | content                 | model |
+      | error | context length exceeded | echo  |
+    When the scheduler ticks at "2026-04-21T09:00:00-0500"
+    Then the isaac file "cron.edn" EDN contains:
+      | path                     | value                          |
+      | health-check.last-status | failed                         |
+      | health-check.last-error  | #".*context length exceeded.*" |
+
+  @wip
+  Scenario: a cron turn that produces no assistant reply is not a success (isaac-7ngj)
+    Given config:
+      | tz                       | America/Chicago         |
+      | sessions.naming-strategy | sequential              |
+      | cron.health-check.expr   | 0 9 * * *               |
+      | cron.health-check.crew   | main                    |
+      | cron.health-check.prompt | Run the health checkin. |
+    And the following model responses are queued:
+      | type | content | model |
+      | text |         | echo  |
+    When the scheduler ticks at "2026-04-21T09:00:00-0500"
+    Then the isaac file "cron.edn" EDN contains:
+      | path                     | value                    |
+      | health-check.last-status | failed                   |
+      | health-check.last-error  | #"(?i).*empty.*"         |
+
+  @wip
+  Scenario: a successful cron run clears a previous failure (isaac-7ngj)
+    Given config:
+      | tz                       | America/Chicago         |
+      | sessions.naming-strategy | sequential              |
+      | cron.health-check.expr   | 0 9 * * *               |
+      | cron.health-check.crew   | main                    |
+      | cron.health-check.prompt | Run the health checkin. |
+    And the isaac EDN file "cron.edn" contains:
+      | path                     | value                    |
+      | health-check.last-run    | 2026-04-20T09:00:00-0500 |
+      | health-check.last-status | failed                   |
+      | health-check.last-error  | provider wall            |
+    And the following model responses are queued:
+      | type | content         | model |
+      | text | Health is good. | echo  |
+    When the scheduler ticks at "2026-04-21T09:00:00-0500"
+    Then the isaac file "cron.edn" EDN contains:
+      | path                     | value                    |
+      | health-check.last-run    | 2026-04-21T09:00:00-0500 |
+      | health-check.last-status | succeeded                |
+      | health-check.last-error  | nil                      |
