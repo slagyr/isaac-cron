@@ -7,16 +7,16 @@
     [isaac.comm.delivery.queue :as delivery-queue]
     [isaac.comm.null :as null-comm]
     [isaac.config.loader :as loader]
+    [isaac.cron.state :as state]
+    [isaac.logger :as log]
+    [isaac.nexus :as nexus]
     [isaac.reconfigurable :as reconfigurable]
     [isaac.scheduler.cron :as cron]
-     [isaac.cron.state :as state]
-     [isaac.logger :as log]
-     [isaac.scheduler.runtime :as scheduler]
-     [isaac.session.context :as session-ctx]
-     [isaac.session.frequencies :as frequencies]
-     [isaac.session.store.spi :as store]
-     [isaac.nexus :as nexus]
-     [isaac.tool.memory :as memory])
+    [isaac.scheduler.runtime :as scheduler]
+    [isaac.session.context :as session-ctx]
+    [isaac.session.frequencies :as frequencies]
+    [isaac.session.store.spi :as store]
+    [isaac.tool.memory :as memory])
   (:import
     (java.time ZoneId ZonedDateTime)))
 
@@ -133,6 +133,29 @@
 
       :else {:session-key (:session-key target)})))
 
+(defn- assistant-content [result]
+  (not-empty (str/trim (turn-content result))))
+
+(defn- successful-turn? [result]
+  (and (not (:error result))
+       (not (:unavailable? result))
+       (boolean (assistant-content result))))
+
+(defn- failure-outcome [result]
+  (cond
+    (:unavailable? result) :unavailable
+    (:error result) :error
+    :else :empty-reply))
+
+(defn- failure-summary [result]
+  (or (when (:unavailable? result)
+        (str "provider unavailable"
+             (when-let [reason (:reason result)] (str " (" (name reason) ")"))))
+      (:message result)
+      (when-let [error (:error result)]
+        (if (keyword? error) (name error) (str error)))
+      "empty assistant reply"))
+
 (defn- fire-job! [ctx cfg job-name {:keys [crew prompt comm to] :as job} scheduled-at]
   (let [root           (:root ctx)
         session-store* (or (:session-store ctx) (nexus/get-in [:sessions :store]))
@@ -158,12 +181,17 @@
                                            :origin         {:kind :cron :name (str job-name)}
                                            :comm           null-comm/channel})))
             _           (maybe-enqueue-delivery! {:comm comm :to to} result)
-            failed?     (boolean (:error result))]
+            succeeded?  (successful-turn? result)
+            outcome     (when-not succeeded? (failure-outcome result))
+            error       (when-not succeeded? (failure-summary result))]
+        (when-not succeeded?
+          (log/warn :cron/job-failed
+                    :job (str job-name)
+                    :outcome outcome
+                    :message error))
         (state/write-job-state! root job-name {:last-run    (cron/format-zoned-date-time scheduled-at)
-                                               :last-status (if failed? :failed :succeeded)
-                                               :last-error  (when failed?
-                                                              (or (:message result)
-                                                                  (some-> (:error result) str)))})
+                                               :last-status (if succeeded? :succeeded :failed)
+                                               :last-error  error})
         result))))
 
 (defn- handle-scheduled-job! [ctx cfg tick-ms job-name job {:keys [scheduled-at now]}]

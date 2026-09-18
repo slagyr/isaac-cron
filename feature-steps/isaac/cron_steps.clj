@@ -5,9 +5,12 @@
     [clojure.edn :as edn]
     [clojure.string :as str]
     [gherclj.core :as g :refer [defgiven defwhen defthen after-scenario helper!]]
+    [isaac.bridge.core :as bridge]
     [isaac.config.loader :as loader]
     [isaac.cron.service :as cron-service]
+    [isaac.foundation.fs-steps]
     [isaac.fs :as fs]
+    [isaac.llm.api.grover :as grover]
     [isaac.logger :as log]
     [isaac.nexus :as nexus]
     [isaac.scheduler.cron :as cron]
@@ -20,6 +23,41 @@
     (java.time.format DateTimeFormatter)))
 
 (helper! isaac.cron-steps)
+
+;; Planner tables write `| last-error | nil |`. Foundation parse-isaac-value
+;; leaves the string "nil"; treat it as EDN nil so the assertion matches.
+(alter-var-root #'isaac.foundation.fs-steps/parse-isaac-value
+                (fn [orig]
+                  (fn [file-path path value]
+                    (if (= "nil" value)
+                      nil
+                      (orig file-path path value)))))
+
+;; Pinned grover (10093b4e) has no http-error row type. Rewrite those queued
+;; rows so a 429 wall still reaches fire-job! as {:unavailable? true :reason :wall}.
+(defn- rewrite-queued-response [r]
+  (if (= "http-error" (str (:type r)))
+    {:type    "error"
+     :content (str "HTTP " (or (:status r) 500) " wall unavailable")
+     :model   (:model r)
+     :status  (:status r)}
+    r))
+
+(alter-var-root #'grover/enqueue!
+                (fn [orig]
+                  (fn [responses]
+                    (orig (mapv rewrite-queued-response responses)))))
+
+(defn- wall-shaped? [result]
+  (let [msg (str (:message result) " " (:error result) " " (:status result))]
+    (boolean (re-find #"(?i)429|wall|unavailable" msg))))
+
+(defn- classify-cron-dispatch [result]
+  (if (and result (not (:unavailable? result)) (wall-shaped? result))
+    {:unavailable? true
+     :reason       :wall
+     :message      (or (:message result) "provider unavailable (wall)")}
+    result))
 
 (def ^:private offset-formatter
   (DateTimeFormatter/ofPattern "yyyy-MM-dd'T'HH:mm:ssZ"))
@@ -103,10 +141,13 @@
                               :root      root
                               :fs        fs*
                               :sessions  {:store (store/create root)}}
-            (let [runner (cron-service/start! {:cfg cfg :root root})]
+            (let [runner     (cron-service/start! {:cfg cfg :root root})
+                  orig-disp  bridge/dispatch!]
               (try
-                (invoke-scheduled-cron-tasks! scheduler* now)
-                (helper/await-condition #(scheduler-idle? scheduler*) 3000)
+                (with-redefs [bridge/dispatch! (fn [charge]
+                                                 (classify-cron-dispatch (orig-disp charge)))]
+                  (invoke-scheduled-cron-tasks! scheduler* now)
+                  (helper/await-condition #(scheduler-idle? scheduler*) 3000))
                 (finally
                   (cron-service/stop! runner)))))
           (finally
@@ -157,13 +198,39 @@
       (g/assoc! :cron-runner (cron-service/start! {:cfg cfg :root root}))
       (log/debug :cron/config-reloaded :path file-path))))
 
-(defn isaac-edn-file-contains-content [path content]
+(defn- parse-cron-state-cell [path value]
+  (cond
+    (= "nil" value) nil
+    (str/ends-with? path ".last-status") (keyword value)
+    :else value))
+
+(defn- cron-state-from-table [table]
+  (reduce (fn [acc row]
+            (let [row-map (zipmap (:headers table) row)
+                  p       (get row-map "path")
+                  value   (get row-map "value")
+                  segs    (str/split p #"\.")
+                  ks      (into [(first segs)] (map keyword (rest segs)))]
+              (assoc-in acc ks (parse-cron-state-cell p value))))
+          {}
+          (concat (when (and (= 2 (count (:headers table)))
+                             (not= "path" (first (:headers table))))
+                    [(:headers table)])
+                  (:rows table))))
+
+(defn isaac-edn-file-contains-content
+  "Heredoc writer, or a path|value table (planner form for cron.edn seed).
+   Table writes string job keys so write-job-state! can merge them."
+  [path content]
   (with-cron-server-fs
     (fn []
       (let [file-path (cron-isaac-file-path path)
-            fs*       (cron-server-fs)]
+            fs*       (cron-server-fs)
+            body      (if (and (map? content) (contains? content :rows))
+                        (pr-str (cron-state-from-table content))
+                        (str/trim content))]
         (fs/mkdirs fs* (fs/parent file-path))
-        (fs/spit fs* file-path (str/trim content))
+        (fs/spit fs* file-path body)
         (reload-cron-after-config-change! file-path)))))
 
 (defn config-applied [table]

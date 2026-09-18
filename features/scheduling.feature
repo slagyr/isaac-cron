@@ -95,7 +95,6 @@ Feature: Cron jobs
   # (:unavailable? true, no :error) and other non-error failures therefore
   # write :succeeded. Success means: the turn ended with an assistant reply.
 
-  @wip
   Scenario: a provider wall during a cron turn records failed with the reason (isaac-7ngj)
     Given config:
       | tz                       | America/Chicago         |
@@ -111,12 +110,11 @@ Feature: Cron jobs
       | path                     | value                       |
       | health-check.last-run    | 2026-04-21T09:00:00-0500    |
       | health-check.last-status | failed                      |
-      | health-check.last-error  | #"(?i).*(wall|unavailable|429).*" |
+      | health-check.last-error  | #"(?i).*wall.*" |
     And the log has entries matching:
       | level | event            | job          | outcome      |
       | :warn | :cron/job-failed | health-check | :unavailable |
 
-  @wip
   Scenario: a provider error during a cron turn records failed with the message (isaac-7ngj)
     Given config:
       | tz                       | America/Chicago         |
@@ -133,7 +131,6 @@ Feature: Cron jobs
       | health-check.last-status | failed                         |
       | health-check.last-error  | #".*context length exceeded.*" |
 
-  @wip
   Scenario: a cron turn that produces no assistant reply is not a success (isaac-7ngj)
     Given config:
       | tz                       | America/Chicago         |
@@ -150,7 +147,6 @@ Feature: Cron jobs
       | health-check.last-status | failed                   |
       | health-check.last-error  | #"(?i).*empty.*"         |
 
-  @wip
   Scenario: a successful cron run clears a previous failure (isaac-7ngj)
     Given config:
       | tz                       | America/Chicago         |

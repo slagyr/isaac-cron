@@ -4,17 +4,17 @@
     [isaac.charge :as charge]
     [isaac.comm.delivery.queue :as delivery-queue]
     [isaac.comm.null :as null-comm]
-    [isaac.llm.api.grover :as grover]
-
     [isaac.config.loader :as loader]
     [isaac.config.runtime :as runtime]
     [isaac.cron.service :as sut]
+    [isaac.cron.state :as state]
     [isaac.fs :as fs]
-    [isaac.scheduler.runtime :as scheduler-core]
-    [isaac.spec-helper :as helper]
+    [isaac.llm.api.grover :as grover]
     [isaac.nexus :as nexus]
+    [isaac.scheduler.runtime :as scheduler-core]
     [isaac.session.context :as session-ctx]
     [isaac.session.store.spi :as store]
+    [isaac.spec-helper :as helper]
     [speclj.core :refer :all]))
 
 (describe "cron scheduler"
@@ -128,6 +128,47 @@
       (should= null-comm/channel (:comm @built))
       (should= "Scheduled cron turn; the user may not see your reply." (:guidance @built))
       (should= {:charge/type :charge} @routed)))
+
+  (defn- fire-health-check! [result]
+    (with-redefs [session-ctx/create-with-resolved-behavior! (fn [_ _] {:id "session-1"})
+                  charge/build                               (fn [_] {:charge/type :charge})
+                  bridge/dispatch!                           (fn [_] result)]
+      (#'sut/fire-job! {:root "/test/isaac" :session-store (store/create "/test/isaac")}
+                       {:defaults {:crew "main"}}
+                       "health-check"
+                       {:crew "main" :prompt "Run the health checkin."}
+                       (java.time.ZonedDateTime/parse "2026-05-25T09:00:00-07:00[America/Phoenix]"))))
+
+  (it "records an unavailable scheduled turn as failed with its reason"
+    (fire-health-check! {:unavailable? true :reason :wall :ended-by :context-exhausted})
+    (should= {:last-run    "2026-05-25T09:00:00-0700"
+              :last-status :failed
+              :last-error  "provider unavailable (wall)"}
+             (get (state/read-state "/test/isaac") "health-check")))
+
+  (it "records a provider error during a scheduled turn as failed with its message"
+    (fire-health-check! {:error :llm-error :message "context length exceeded"})
+    (should= {:last-run    "2026-05-25T09:00:00-0700"
+              :last-status :failed
+              :last-error  "context length exceeded"}
+             (get (state/read-state "/test/isaac") "health-check")))
+
+  (it "records a scheduled turn with no assistant reply as failed"
+    (fire-health-check! {:response {:model "echo" :message {:role "assistant" :content ""}}})
+    (should= {:last-run    "2026-05-25T09:00:00-0700"
+              :last-status :failed
+              :last-error  "empty assistant reply"}
+             (get (state/read-state "/test/isaac") "health-check")))
+
+  (it "records a nested echo reply as succeeded and clears a previous failure"
+    (state/write-job-state! "/test/isaac" "health-check" {:last-run    "2026-05-24T09:00:00-0700"
+                                                          :last-status :failed
+                                                          :last-error  "provider wall"})
+    (fire-health-check! {:response {:model "echo" :message {:role "assistant" :content "Health is good."}}})
+    (should= {:last-run    "2026-05-25T09:00:00-0700"
+              :last-status :succeeded
+              :last-error  nil}
+             (get (state/read-state "/test/isaac") "health-check")))
 
   (it "enqueues delivery when a cron job names a comm and recipient"
     (let [enqueued (atom nil)]
