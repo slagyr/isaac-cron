@@ -84,7 +84,7 @@ Feature: Cron jobs
               {:expr "0 3 * * *" :crew :main :prompt "tidy up"}}}
       """
     And the Isaac system is started
-    When the isaac EDN file "config/isaac.edn" changes to:
+    When the isaac EDN file "config/isaac.edn" is rewritten to:
       """
       {:tz "America/Chicago" :cron {}}
       """
@@ -123,13 +123,13 @@ Feature: Cron jobs
       | cron.health-check.crew   | main                    |
       | cron.health-check.prompt | Run the health checkin. |
     And the following model responses are queued:
-      | type  | content                 | model |
-      | error | context length exceeded | echo  |
+      | type  | content                   | model |
+      | error | upstream provider exploded | echo  |
     When the scheduler ticks at "2026-04-21T09:00:00-0500"
     Then the isaac file "cron.edn" EDN contains:
-      | path                     | value                          |
-      | health-check.last-status | failed                         |
-      | health-check.last-error  | #".*context length exceeded.*" |
+      | path                     | value                            |
+      | health-check.last-status | failed                           |
+      | health-check.last-error  | #".*upstream provider exploded.*" |
 
   Scenario: a cron turn that produces no assistant reply is not a success (isaac-7ngj)
     Given config:
@@ -140,6 +140,7 @@ Feature: Cron jobs
       | cron.health-check.prompt | Run the health checkin. |
     And the following model responses are queued:
       | type | content | model |
+      | text |         | echo  |
       | text |         | echo  |
     When the scheduler ticks at "2026-04-21T09:00:00-0500"
     Then the isaac file "cron.edn" EDN contains:

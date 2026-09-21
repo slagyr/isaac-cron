@@ -4,6 +4,7 @@
     [isaac.charge :as charge]
     [isaac.comm.delivery.queue :as delivery-queue]
     [isaac.comm.null :as null-comm]
+    [isaac.config.api :as config]
     [isaac.config.loader :as loader]
     [isaac.config.runtime :as runtime]
     [isaac.cron.service :as sut]
@@ -200,14 +201,18 @@
                :crew     {"main" {:model :grover :soul "You are Atticus."}}
                :models   {"grover" {:model "echo" :provider :grover :context-window 32768}}
                :providers {:grover {:api :grover :auth "none"}}}]
-      (#'sut/fire-job! {:root "/test/isaac"}
-                       cfg
-                       "watch-report"
-                       {:crew   "main"
-                        :prompt "File the dawn watch."
-                        :comm   "longwave"
-                        :to     "captain"}
-                       (java.time.ZonedDateTime/parse "2026-05-25T06:00:00-07:00[America/Phoenix]"))
+      ;; resolve-behavior reads the installed snapshot, not the cfg passed in.
+      (config/dangerously-install-config! cfg "spec")
+      (try
+        (#'sut/fire-job! {:root "/test/isaac"}
+                         cfg
+                         "watch-report"
+                         {:crew   "main"
+                          :prompt "File the dawn watch."
+                          :comm   "longwave"
+                          :to     "captain"}
+                         (java.time.ZonedDateTime/parse "2026-05-25T06:00:00-07:00[America/Phoenix]"))
+        (finally (config/dangerously-install-config! nil "spec")))
       (should= 1 (count (delivery-queue/list-pending)))))
 
   (it "maybe-enqueue-delivery! writes a pending record for targeted jobs"

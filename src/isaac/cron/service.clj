@@ -82,7 +82,11 @@
     :else (ZonedDateTime/ofInstant (memory/now) zone)))
 
 (defn- turn-content [result]
-  (or (get-in result [:response :message :content])
+  ;; isaac-g71i seam: a normalized provider response carries its text at
+  ;; [:response :content]. Without this arm a targeted cron job resolves an
+  ;; empty body and silently enqueues no delivery.
+  (or (get-in result [:response :content])
+      (get-in result [:response :message :content])
       (get-in result [:message :content])
       (:content result)
       ""))

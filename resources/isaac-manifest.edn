@@ -1,5 +1,5 @@
 {:id :isaac.cron,
- :version "0.1.4",
+ :version "0.1.5",
  :builtin? true,
  :factory isaac.cron.module/create-module,
  :isaac.config/component
@@ -33,7 +33,7 @@
       :comm
       {:type :string,
        :description "Comm to deliver the job's response through (optional)",
-       :validations [[:nil-or? [:registered-in? :isaac.http/comm [:comms]]]]},
+       :validations [[:nil-or? [:registered-in? :isaac.agent/comm [:comms]]]]},
       :to
       {:type :string,
        :description "Recipient on the target comm (required when :comm is set)"},

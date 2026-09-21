@@ -271,8 +271,10 @@
 (defgiven #"the isaac EDN file \"([^\"]+)\" contains:" isaac.cron-steps/isaac-edn-file-contains-content
   "Writes heredoc EDN under the Isaac root and reloads cron when the system is running.")
 
-(defwhen #"the isaac EDN file \"([^\"]+)\" changes to:" isaac.cron-steps/isaac-edn-file-contains-content
-  "Alias for the heredoc EDN writer used after startup to simulate hot reload.")
+(defwhen #"the isaac EDN file \"([^\"]+)\" is rewritten to:" isaac.cron-steps/isaac-edn-file-contains-content
+  "Alias for the heredoc EDN writer used after startup to simulate hot reload.
+   Phrased apart from isaac-agent's \"changes to:\" step, which rewrites the
+   file and then sweeps weather-suspended turns.")
 
 (defwhen "the Isaac system is started" isaac.cron-steps/isaac-system-started)
 
