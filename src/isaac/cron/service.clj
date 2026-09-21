@@ -55,12 +55,6 @@
 (defn make [host]
   (->CronModule (:root host) (atom {}) (atom nil)))
 
-(def registry
-  {:kind    :component
-   :path    [:cron]
-   :impl    "cron"
-   :factory make})
-
 (defn- ->job-name [job-name]
   (if (keyword? job-name) (name job-name) (str job-name)))
 
