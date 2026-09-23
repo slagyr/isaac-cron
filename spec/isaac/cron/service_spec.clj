@@ -121,7 +121,7 @@
                                                                  (reset! routed c)
                                                                  {})]
         (#'sut/fire-job! {:root "/test/isaac" :session-store (store/create "/test/isaac")}
-                         {:defaults {:crew "main"}}
+                         {:defaults {:frequencies {:crew "main"}}}
                          "health-check"
                          {:crew "main" :prompt "Run the health checkin."}
                          (java.time.ZonedDateTime/parse "2026-05-25T09:00:00-07:00[America/Phoenix]")))
@@ -135,7 +135,7 @@
                   charge/build                               (fn [_] {:charge/type :charge})
                   bridge/dispatch!                           (fn [_] result)]
       (#'sut/fire-job! {:root "/test/isaac" :session-store (store/create "/test/isaac")}
-                       {:defaults {:crew "main"}}
+                       {:defaults {:frequencies {:crew "main"}}}
                        "health-check"
                        {:crew "main" :prompt "Run the health checkin."}
                        (java.time.ZonedDateTime/parse "2026-05-25T09:00:00-07:00[America/Phoenix]"))))
@@ -180,7 +180,7 @@
                                                                  (reset! enqueued record)
                                                                  record)]
         (#'sut/fire-job! {:root "/test/isaac" :session-store (store/create "/test/isaac")}
-                         {:defaults {:crew "main"}}
+                         {:defaults {:frequencies {:crew "main"}}}
                          "watch-report"
                          {:crew   "main"
                           :prompt "File the dawn watch."
@@ -197,7 +197,7 @@
     (grover/install-test-fixture!)
     (grover/enqueue! [{:type "text" :content "Dawn watch clear." :model "echo"}])
     (nexus/register! [:sessions :store] (store/create "/test/isaac"))
-    (let [cfg {:defaults {:crew "main" :model "grover"}
+    (let [cfg {:defaults {:frequencies {:crew "main"} :crew {:model "grover"}}
                :crew     {"main" {:model :grover :soul "You are Atticus."}}
                :models   {"grover" {:model "echo" :provider :grover :context-window 32768}}
                :providers {:grover {:api :grover :auth "none"}}}]
@@ -234,7 +234,7 @@
                     delivery-queue/enqueue!                      (fn [_]
                                                                  (reset! enqueued true))]
         (#'sut/fire-job! {:root "/test/isaac" :session-store (store/create "/test/isaac")}
-                         {:defaults {:crew "main"}}
+                         {:defaults {:frequencies {:crew "main"}}}
                          "hull-check"
                          {:crew "main" :prompt "Tally the hull stress gauges."}
                          (java.time.ZonedDateTime/parse "2026-05-25T13:00:00-07:00[America/Phoenix]")))
