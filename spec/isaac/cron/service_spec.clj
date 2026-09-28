@@ -82,6 +82,10 @@
            (should= 1 @started)
            (should= 0 @stopped)))))
 
+  (it "does not declare reach on cron jobs"
+    (let [manifest (clojure.edn/read-string (slurp "resources/isaac-manifest.edn"))]
+      (should-not (contains? (get-in manifest [:isaac.config/schema :cron :schema :value-spec :schema]) :reach))))
+
   (it "registers one shared-scheduler task per cron job"
     (let [scheduled (atom [])
           fake-scheduler {}
@@ -145,6 +149,13 @@
     (should= {:last-run    "2026-05-25T09:00:00-0700"
               :last-status :failed
               :last-error  "provider unavailable (wall)"}
+             (get (state/read-state "/test/isaac") "health-check")))
+
+  (it "records suspended silence as an unavailable empty assistant reply"
+    (fire-health-check! {:unavailable? true :reason :silence :ended-by :suspended})
+    (should= {:last-run    "2026-05-25T09:00:00-0700"
+              :last-status :failed
+              :last-error  "provider unavailable (silence; empty assistant reply)"}
              (get (state/read-state "/test/isaac") "health-check")))
 
   (it "records a provider error during a scheduled turn as failed with its message"

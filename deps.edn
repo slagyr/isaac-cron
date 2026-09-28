@@ -4,7 +4,7 @@
         io.github.slagyr/isaac-foundation {:git/url "https://github.com/slagyr/isaac-foundation.git"
                                           :git/sha "9ab25271aedb97c2e2e8abbc6a58955cdff8f274"}
         io.github.slagyr/isaac-agent {:git/url "https://github.com/slagyr/isaac-agent.git"
-                                          :git/sha "da9214aa72786fd830847c5542f5ea7781a44410"}
+                                          :git/sha "b1de8dc554ff9eefac90ea34e6e1902c642d2aaf"}
         }
 
  :aliases
@@ -23,7 +23,7 @@
                                                                        :git/sha "9ab25271aedb97c2e2e8abbc6a58955cdff8f274"
                                                                        :deps/root "spec-support"}
                        io.github.slagyr/isaac-agent-spec              {:git/url "https://github.com/slagyr/isaac-agent.git"
-                                                                       :git/sha "da9214aa72786fd830847c5542f5ea7781a44410"
+                                                                       :git/sha "b1de8dc554ff9eefac90ea34e6e1902c642d2aaf"
                                                                        :deps/root "spec"}
                        io.github.slagyr/isaac-http                  {:git/url "https://github.com/slagyr/isaac-http.git"
                                                                        :git/sha "71a04136404c37fa09a681bc14ac79663a7e4e53"}
@@ -44,7 +44,7 @@
                                                                           :git/sha "9ab25271aedb97c2e2e8abbc6a58955cdff8f274"
                                                                           :deps/root "spec-support"}
                            io.github.slagyr/isaac-agent-spec            {:git/url "https://github.com/slagyr/isaac-agent.git"
-                                                                        :git/sha "da9214aa72786fd830847c5542f5ea7781a44410"
+                                                                        :git/sha "b1de8dc554ff9eefac90ea34e6e1902c642d2aaf"
                                                                         :deps/root "spec"}
                            speclj/speclj                                {:mvn/version "3.13.0"}
                            babashka/process                             {:mvn/version "0.5.22"}

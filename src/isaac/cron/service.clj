@@ -100,7 +100,7 @@
                                 :content content}))))
 
 (def ^:private frequency-keys
-  [:session :session-tags :crew :reach :prefer :create
+  [:session :session-tags :crew :prefer :create
    :with-crew :with-model :with-effort :with-context-mode])
 
 (defn- job->frequencies [job]
@@ -148,7 +148,10 @@
 (defn- failure-summary [result]
   (or (when (:unavailable? result)
         (str "provider unavailable"
-             (when-let [reason (:reason result)] (str " (" (name reason) ")"))))
+             (when-let [reason (:reason result)]
+               (if (= :silence reason)
+                 " (silence; empty assistant reply)"
+                 (str " (" (name reason) ")")))))
       (:message result)
       (when-let [error (:error result)]
         (if (keyword? error) (name error) (str error)))

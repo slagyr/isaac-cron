@@ -1,5 +1,5 @@
 {:id :isaac.cron,
- :version "0.1.5",
+ :version "0.1.6",
  :builtin? true,
  :factory isaac.cron.module/create-module,
  :isaac.config/component
@@ -49,13 +49,9 @@
       {:type :seq,
        :description "Tags the target session must carry (AND)",
        :spec {:type :keyword}},
-      :reach
-      {:type :keyword,
-       :description "How many sessions to target (:one for cron)",
-       :validations [[:one-of? :one :all]]},
       :prefer
       {:type :keyword,
-       :description "Multi-match tiebreak when :reach is :one",
+       :description "Multi-match tiebreak",
        :validations [[:one-of? :recent :oldest]]},
       :create
       {:type :keyword,
