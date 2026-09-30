@@ -1,10 +1,13 @@
-(ns isaac.config.schema-spec
+(ns isaac.cron.config.schema-spec
   (:require
     [c3kit.apron.schema :as schema]
     [clojure.edn :as edn]
-    [isaac.config.validation-lexicon :as validation-lexicon]
-    [isaac.schema.lexicon :as lexicon]
-    [isaac.schema.registered-in :as registered-in]
+    [isaac.foundation.config.validation-lexicon :as validation-lexicon]
+    [isaac.foundation.fs :as fs]
+    [isaac.foundation.module.discovery :as discovery]
+    [isaac.foundation.nexus :as nexus]
+    [isaac.foundation.schema.lexicon :as lexicon]
+    [isaac.foundation.schema.registered-in :as registered-in]
     [speclj.core :refer :all]))
 
 (defn- cron-schema []
@@ -22,6 +25,16 @@
                                                        :skybeam  {}}}}})
 
 (describe "config schema"
+
+  ;; :crew-exists? is contributed by isaac-agent through the
+  ;; :isaac.config/validation-ref berth (isaac-h2oo), not a foundation
+  ;; static ref, so it isn't in the global lexicon until something composes
+  ;; the module index at least once. Register it explicitly rather than
+  ;; relying on another spec file (e.g. handbook_chapter_spec) happening to
+  ;; run first and populate it as a side effect.
+  (before-all
+    (nexus/-with-nexus {:fs (fs/real-fs)}
+      (validation-lexicon/register-contributed-existence-refs! (discovery/builtin-index))))
 
   (it "cron table conforms job maps"
     (binding [validation-lexicon/*config* {:crew {"main" {}}}]

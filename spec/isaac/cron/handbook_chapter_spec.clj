@@ -10,11 +10,11 @@
   (:require
     [clojure.java.io :as io]
     [clojure.string :as str]
-    [isaac.config.schema-compose :as schema-compose]
-    [isaac.config.schema.resolve :as schema-resolve]
-    [isaac.fs :as fs]
-    [isaac.module.discovery :as discovery]
-    [isaac.nexus :as nexus]
+    [isaac.foundation.config.schema-compose :as schema-compose]
+    [isaac.foundation.config.schema.resolve :as schema-resolve]
+    [isaac.foundation.fs :as fs]
+    [isaac.foundation.module.discovery :as discovery]
+    [isaac.foundation.nexus :as nexus]
     [speclj.core :refer :all]))
 
 (def ^:private chapter-resource "isaac/cron/handbook.md")
@@ -43,9 +43,9 @@
 (defn- known-cli-commands
   "Top-level command names contributed to the :isaac/cli berth by every
    module in `index` (foundation + agent + cron, via the builtin index). Reads
-   each module's raw manifest rather than isaac.module.berths' introspection
-   helpers, which aren't available at every foundation pin a module may carry
-   (isaac-lp5y)."
+   each module's raw manifest rather than isaac.foundation.module.berths'
+   introspection helpers, which aren't available at every foundation pin a
+   module may carry (isaac-lp5y)."
   [index]
   (->> (vals index)
        (mapcat (fn [entry] (keys (get-in entry [:manifest :isaac/cli]))))

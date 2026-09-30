@@ -1,8 +1,8 @@
 (ns isaac.cron.state-spec
   (:require
     [isaac.cron.state :as sut]
-    [isaac.fs :as fs]
-    [isaac.nexus :as nexus]
+    [isaac.foundation.fs :as fs]
+    [isaac.foundation.nexus :as nexus]
     [speclj.core :refer :all]))
 
 (describe "cron state"

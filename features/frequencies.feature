@@ -1,7 +1,7 @@
 Feature: Cron session frequencies
   A cron job builds a session-frequencies map from its flat config
   (crew / session / session-tags / create / prefer alongside the :with-*
-  overrides) and resolves it through the shared isaac.session.frequencies
+  overrides) and resolves it through the shared isaac.agent.frequencies
   core. This lets a scheduled prompt resume the most-recent matching session
   (or always start fresh) and override crew/model/effort/context-mode for the
   turn — instead of always creating a brand-new session per tick.

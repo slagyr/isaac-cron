@@ -1,28 +1,28 @@
-(ns isaac.cron-steps
+(ns isaac.cron.cron-steps
   "Cron-specific gherclj steps. Foundation scheduler steps live in
-   isaac.scheduler-steps from isaac-foundation-spec."
+   isaac.foundation.scheduler-steps from isaac-foundation-spec."
   (:require
     [clojure.edn :as edn]
     [clojure.string :as str]
     [gherclj.core :as g :refer [defgiven defwhen defthen after-scenario helper!]]
-    [isaac.bridge.core :as bridge]
-    [isaac.config.loader :as loader]
+    [isaac.agent.bridge.core :as bridge]
+    [isaac.agent.llm.api.grover :as grover]
+    [isaac.agent.session.store.spi :as store]
     [isaac.cron.service :as cron-service]
+    [isaac.foundation.config.loader :as loader]
+    [isaac.foundation.fs :as fs]
     [isaac.foundation.fs-steps]
-    [isaac.fs :as fs]
-    [isaac.llm.api.grover :as grover]
-    [isaac.logger :as log]
-    [isaac.nexus :as nexus]
-    [isaac.scheduler.cron :as cron]
-    [isaac.scheduler.runtime :as scheduler]
-    [isaac.http.app :as app]
-    [isaac.session.store.spi :as store]
-    [isaac.spec-helper :as helper])
+    [isaac.foundation.logger :as log]
+    [isaac.foundation.nexus :as nexus]
+    [isaac.foundation.scheduler.cron :as cron]
+    [isaac.foundation.scheduler.runtime :as scheduler]
+    [isaac.foundation.spec-helper :as helper]
+    [isaac.http.app :as app])
   (:import
     (java.time ZonedDateTime)
     (java.time.format DateTimeFormatter)))
 
-(helper! isaac.cron-steps)
+(helper! isaac.cron.cron-steps)
 
 ;; Planner tables write `| last-error | nil |`. Foundation parse-isaac-value
 ;; leaves the string "nil"; treat it as EDN nil so the assertion matches.
@@ -264,28 +264,28 @@
 (defn scheduler-not-running []
   (g/should-not (scheduler/running? (current-scheduler))))
 
-(defwhen #"the scheduler ticks at \"([^\"]+)\"" isaac.cron-steps/scheduler-ticks-at
+(defwhen #"the scheduler ticks at \"([^\"]+)\"" isaac.cron.cron-steps/scheduler-ticks-at
   "Schedules configured cron jobs on the shared scheduler, then invokes
    their registered handlers at the given ISO timestamp.")
 
-(defgiven #"the isaac EDN file \"([^\"]+)\" contains:" isaac.cron-steps/isaac-edn-file-contains-content
+(defgiven #"the isaac EDN file \"([^\"]+)\" contains:" isaac.cron.cron-steps/isaac-edn-file-contains-content
   "Writes heredoc EDN under the Isaac root and reloads cron when the system is running.")
 
-(defwhen #"the isaac EDN file \"([^\"]+)\" is rewritten to:" isaac.cron-steps/isaac-edn-file-contains-content
+(defwhen #"the isaac EDN file \"([^\"]+)\" is rewritten to:" isaac.cron.cron-steps/isaac-edn-file-contains-content
   "Alias for the heredoc EDN writer used after startup to simulate hot reload.
    Phrased apart from isaac-agent's \"changes to:\" step, which rewrites the
    file and then sweeps weather-suspended turns.")
 
-(defwhen "the Isaac system is started" isaac.cron-steps/isaac-system-started)
+(defwhen "the Isaac system is started" isaac.cron.cron-steps/isaac-system-started)
 
-(defwhen "the Isaac system is stopped" isaac.cron-steps/isaac-system-stopped)
+(defwhen "the Isaac system is stopped" isaac.cron.cron-steps/isaac-system-stopped)
 
-(defwhen "cron config is:" isaac.cron-steps/cron-config-is
+(defwhen "cron config is:" isaac.cron.cron-steps/cron-config-is
   "Applies a config table update before a scheduler tick so cron jobs
    observe the rewritten prompt on the next fire.")
 
-(defthen "the scheduler is running" isaac.cron-steps/scheduler-running)
+(defthen "the scheduler is running" isaac.cron.cron-steps/scheduler-running)
 
-(defthen "the scheduler is not running" isaac.cron-steps/scheduler-not-running)
+(defthen "the scheduler is not running" isaac.cron.cron-steps/scheduler-not-running)
 
-(defthen "the cron job {string} has:" isaac.cron-steps/cron-job-has)
+(defthen "the cron job {string} has:" isaac.cron.cron-steps/cron-job-has)

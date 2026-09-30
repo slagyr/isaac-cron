@@ -18,7 +18,7 @@ Scheduled prompt jobs via the shared foundation scheduler.
 
 Depends on [isaac-foundation](https://github.com/slagyr/isaac-foundation) and
 [isaac-agent](https://github.com/slagyr/isaac-agent). Acceptance tests in
-`features/` use agent + server step definitions; `spec/isaac/scheduler_steps.clj`
+`features/` use agent + server step definitions; `feature-steps/isaac/cron/cron_steps.clj`
 covers cron registration scenarios.
 
 ## What's here

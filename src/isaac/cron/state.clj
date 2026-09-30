@@ -2,8 +2,8 @@
   (:require
     [clojure.edn :as edn]
     [clojure.pprint :as pprint]
-    [isaac.config.loader :as loader]
-    [isaac.fs :as fs]))
+    [isaac.foundation.config.loader :as loader]
+    [isaac.foundation.fs :as fs]))
 
 (defn- cron-state-path [root]
   (str root "/cron.edn"))
