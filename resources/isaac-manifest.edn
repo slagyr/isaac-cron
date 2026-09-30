@@ -1,7 +1,8 @@
 {:id :isaac.cron,
- :version "0.1.6",
+ :version "0.1.7",
  :builtin? true,
  :factory isaac.cron.module/create-module,
+ :handbook "isaac/cron/handbook.md",
  :isaac.config/component
  {:cron {:path [:cron] :impl "cron" :factory isaac.cron.service/make}},
 
