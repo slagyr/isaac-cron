@@ -1,9 +1,12 @@
 (ns isaac.cron.handbook-chapter-spec
   "Lint for isaac.cron's own handbook chapter (isaac-lp5y): every backtick
-   `config:<path>` reference must resolve against the composed config schema,
-   and every `isaac <command>` invocation must name a registered top-level
-   CLI command. Mirrors isaac.foundation.handbook-chapter-spec; see the
-   convention comment at the top of the chapter file itself."
+   `config:<dotted.path>` reference (no angle-bracket placeholder inside the
+   path) must resolve against the composed config schema, and the word
+   right after `isaac ` in every `isaac <command>` invocation must name a
+   registered top-level CLI command. Keep both literal and real when you
+   edit this file — this lint fails the build once either drifts from what
+   Isaac actually exposes. `<placeholder>` shapes are intentionally
+   skipped. Mirrors isaac.foundation.handbook-chapter-spec."
   (:require
     [clojure.java.io :as io]
     [clojure.string :as str]
