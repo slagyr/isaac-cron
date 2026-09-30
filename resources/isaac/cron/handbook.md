@@ -170,9 +170,9 @@ new session, tagged with structural origin `{:kind :cron :name <job-name>}`
 so later queries can tell which cron produced it (`isaac sessions` lists
 sessions; see `isaac.agent` for the session concept itself). Set `session`,
 `session-tags`, `prefer`, and `create` to resume an existing session instead
-— these assemble into the same session-frequencies resolution `isaac.agent`
-uses elsewhere (resume-most-recent, select-by-tag, always-new); this chapter
-only documents cron's flat fields, not that shared mechanism.
+— these are `isaac.agent`'s frequencies fields (`isaac.agent#frequencies`
+has the shape and matching rules); this chapter only documents which of
+cron's flat job fields map to which frequency, not that shared mechanism.
 
 `with-crew`, `with-model`, `with-effort`, and `with-context-mode` override
 the *scheduled turn* only — they don't change the job's own `crew` field or
