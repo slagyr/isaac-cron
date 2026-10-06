@@ -30,7 +30,7 @@ Fields on a job:
 | `expr` | string | 5-field cron expression (minute hour day month weekday). |
 | `prompt` | string | The prompt text sent when the job fires — required, inline or via companion markdown (see Prompt content, below). |
 | `comm` | string | Comm to deliver the reply through. Optional; must name a comm actually configured under `comms`. |
-| `to` | string | Recipient on that comm. Required for delivery when `comm` is set — the format (a channel id, a handle, ...) is defined by the comm itself `[verify]`. |
+| `to` | string | Recipient on that comm. Required for delivery when `comm` is set. Cron enqueues it as the delivery's generic `target` (and `to`), so the format is whatever that comm accepts as a generic `target`; see the comm's own chapter. For gchat that is a configured space name or a `spaces/…` resource name, never an email (`isaac.comm.gchat` → Outbound). |
 | `session` | list of strings | Explicit session id(s) to target; the first is used. |
 | `session-tags` | list of keywords | Tags the target session must carry, all of them (AND). |
 | `prefer` | `:recent` or `:oldest` | Tiebreak when more than one session matches. |
