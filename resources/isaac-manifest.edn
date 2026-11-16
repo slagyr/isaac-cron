@@ -6,6 +6,11 @@
  :isaac.config/component
  {:cron {:path [:cron] :impl "cron" :factory isaac.cron.service/make}},
 
+ :isaac.config/check {:cron-rules {:fn isaac.cron.checks/check-jobs}}
+
+ :isaac/cli {:cron {:usage "cron list" :summary "List scheduled cron jobs"
+                    :namespace isaac.cron.cli :hosted true :read-only #{"list"}}}
+
  :isaac.config/schema
  {:cron
   {:entity-dir "cron",
@@ -27,7 +32,10 @@
       {:type :id,
        :description "Crew id to run the job as",
        :validations [:crew-exists?]},
-      :expr {:type :string, :description "5-field cron expression"},
+      :when {:type :string, :description "iCalendar RRULE body (exclusive with :at)"},
+      :at {:type :string, :description "One-shot ISO local datetime (exclusive with :when)"},
+      :dtstart {:type :string, :description "ISO local datetime anchoring INTERVAL and COUNT rules"},
+      :late-window {:type :string, :description "ISO-8601 duration allowed for late one-shots (default PT12H)"},
       :prompt
       {:type :string,
        :description "Prompt sent when the cron job fires"},

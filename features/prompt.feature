@@ -11,7 +11,6 @@ Feature: Cron prompts from config or markdown companion
   Background:
     Given default Grover setup
 
-  @wip
   Scenario: cron prompt defined inline in config
     Given config:
       | sessions.naming-strategy | sequential              |
@@ -27,7 +26,6 @@ Feature: Cron prompts from config or markdown companion
       | type    | message.role | message.content         |
       | message | user         | Run the health checkin. |
 
-  @wip
   Scenario: cron prompt loaded from companion markdown file
     Given config:
       | sessions.naming-strategy | sequential |
@@ -46,7 +44,6 @@ Feature: Cron prompts from config or markdown companion
       | type    | message.role | message.content               |
       | message | user         | Run the daily health checkin. |
 
-  @wip
   Scenario: cron job loaded from a single markdown file with YAML frontmatter
     Given config:
       | sessions.naming-strategy | sequential      |
@@ -68,7 +65,6 @@ Feature: Cron prompts from config or markdown companion
       | type    | message.role | message.content               |
       | message | user         | Run the daily health checkin. |
 
-  @wip
   Scenario: cron with neither :prompt nor companion md errors at config load
     Given config:
       | cron.health-check.when | FREQ=DAILY;BYHOUR=9;BYMINUTE=0 |
@@ -77,7 +73,6 @@ Feature: Cron prompts from config or markdown companion
       | key                      | value                                     |
       | cron.health-check.prompt | required \(inline or cron/health-check.md\) |
 
-  @wip
   Scenario: cron with an empty companion md errors at config load
     Given config:
       | cron.health-check.when | FREQ=DAILY;BYHOUR=9;BYMINUTE=0 |

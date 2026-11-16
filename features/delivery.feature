@@ -6,7 +6,6 @@ Feature: Cron delivery to a comm
   Background:
     Given default Grover setup
 
-  @wip
   Scenario: a cron addressed to a comm delivers its report through that comm
     Given config:
       | tz                       | America/Chicago                     |
@@ -26,7 +25,6 @@ Feature: Cron delivery to a comm
       | to      | content                               |
       | captain | Dawn watch clear; Marigold steady on. |
 
-  @wip
   Scenario: an untargeted cron runs but enqueues no delivery (skybeam/null default)
     Given config:
       | tz                       | America/Chicago               |

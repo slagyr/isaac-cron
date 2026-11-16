@@ -38,11 +38,11 @@
 
   (it "cron table conforms job maps"
     (binding [validation-lexicon/*config* {:crew {"main" {}}}]
-      (should= {"health-check" {:expr "0 9 * * *"
+      (should= {"health-check" {:when "FREQ=DAILY;BYHOUR=9"
                                 :crew "main"
                                 :prompt "Run the health checkin."}}
                (lexicon/conform (cron-schema)
-                                {"health-check" {:expr "0 9 * * *"
+                                {"health-check" {:when "FREQ=DAILY;BYHOUR=9"
                                                  :crew :main
                                                  :prompt "Run the health checkin."}}))))
 

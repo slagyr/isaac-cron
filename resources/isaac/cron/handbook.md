@@ -8,7 +8,7 @@ its Scheduler section, which cron builds directly on top of. Crew, comm, and
 session concepts referenced below belong to `isaac.agent`; this chapter
 covers them only as far as a cron job configures them.
 
-A cron job is a scheduled prompt: at a cron-expression time, Isaac starts a
+A cron job is a scheduled prompt: at its scheduled time, Isaac starts a
 turn — as if a user had sent that prompt — on behalf of a configured crew
 member, and optionally delivers the reply out through a comm. Nothing here
 runs outside the server process (`isaac server`); a plain CLI command never
@@ -27,7 +27,10 @@ Fields on a job:
 | Field | Type | Meaning |
 |---|---|---|
 | `crew` | id | Crew member the turn runs as. Must name a crew that exists. |
-| `expr` | string | 5-field cron expression (minute hour day month weekday). |
+| `when` | string | iCalendar RRULE body; exclusive with `at`. |
+| `at` | string | One-shot ISO local datetime; exclusive with `when`. |
+| `dtstart` | string | ISO local datetime anchoring `INTERVAL > 1` and `COUNT` rules (required for either). |
+| `late-window` | string | ISO-8601 duration allowed for a late one-shot (default `PT12H`). |
 | `prompt` | string | The prompt text sent when the job fires — required, inline or via companion markdown (see Prompt content, below). |
 | `comm` | string | Comm to deliver the reply through. Optional; must name a comm actually configured under `comms`. |
 | `to` | string | Recipient on that comm. Required for delivery when `comm` is set. Cron enqueues it as the delivery's generic `target` (and `to`), so the format is whatever that comm accepts as a generic `target`; see the comm's own chapter. |
@@ -44,7 +47,7 @@ Fields on a job:
 config path:
 
 ```
-config set cron.watch-report.expr "0 6 * * *"
+config set cron.watch-report.when "FREQ=DAILY;BYHOUR=6;BYMINUTE=0"
 config set cron.watch-report.crew cordelia
 config set cron.watch-report.comm longwave
 config set cron.watch-report.to captain
@@ -94,7 +97,7 @@ config-load **errors**:
   `required (inline or cron/<name>.md)`.
 - `cron/<name>.md` exists but is empty → error, `must not be empty`.
 
-A job's frontmatter can also carry every other field (`expr`, `crew`, ...)
+A job's frontmatter can also carry every other field (`when`, `crew`, ...)
 with the body doubling as the prompt — a single `.md` file is a complete job.
 
 **How to change it.** Inline: `config set cron.watch-report.prompt "File the
@@ -122,46 +125,47 @@ text regardless of which source it came from.
 
 ## Scheduling and timezone
 
-A job's `expr` is a standard 5-field cron expression, evaluated in the
-timezone from the root config's `tz` (falling back to the JVM's system
-default if `tz` is unset) — there is no per-job timezone field; every job in
-one Isaac install shares the same zone. Firing itself runs on
-`isaac.foundation`'s shared scheduler: cron registers one `:cron`-trigger
-task per job, id `cron/<job-name>`, when the server boots or whenever the
-`:cron` config slice changes; removing a job from config cancels its task.
+A job names exactly one schedule: `when` contains an iCalendar RRULE body,
+or `at` contains a one-shot ISO local datetime. Both use the installation's
+`tz` (default: JVM system zone); trailing `Z` on `at` means UTC.
+`dtstart` pins the phase of a repeating rule; it is required when using
+`INTERVAL > 1` or `COUNT`. Seconds are zero. Without `BYMINUTE`, the rule
+fires at minute zero. Supported RRULE parts: `FREQ` (`MINUTELY`, `HOURLY`,
+`DAILY`, `WEEKLY`, `MONTHLY`, `YEARLY`), `INTERVAL`, `BYDAY` (including
+ordinals such as `1TU` or `-1FR`), `BYMONTHDAY`, `BYMONTH`, `BYHOUR`,
+`BYMINUTE`, `COUNT`, and `UNTIL`. Other parts fail validation. `UNTIL`
+is interpreted in the installation zone unless suffixed `Z`. Spring-forward
+missing wall times are skipped; repeated fall-back wall times fire once.
+The old `expr` field is invalid; migrate it before starting the new code.
 
-The scheduler polls roughly every 30 seconds `[verify]`. If a job's
-scheduled fire is more than that behind the current time when the poll
-catches it — the server was down, or badly delayed — the fire is **skipped
-silently**, logged as `:cron/missed-schedule` at `warn`, not run late and not
-queued.
+The shared foundation scheduler registers `:calendar` tasks for `when` jobs
+and `:at` tasks for one-shots. Recurring missed windows are skipped (logged
+as `:cron/missed-schedule`); one-shots run late within `late-window`, but
+past that window are removed without a turn and logged
+`:cron/one-shot-expired`. Once an `at`, `COUNT`, or `UNTIL` job has no
+future occurrence, cron unsets `cron.<name>` through the config mutation
+path. `<root>/cron.edn` retains its definition, final outcome and removal
+time under `:history`. If the config is git-tracked, the deletion leaves
+an uncommitted change for the operator to review.
 
-**How to change it.** `config set cron.watch-report.expr "0 6 * * *"` for the
-job's own schedule; `config set tz America/Chicago` for the shared zone (this
-is a top-level root config key, not under `cron`).
+**How to change it.** `config set cron.watch-report.when
+"FREQ=DAILY;BYHOUR=6;BYMINUTE=0"`, or set `at` to a local datetime such
+as `2026-11-20T09:00:00`. Set `tz` at the root for all jobs.
 
-**How to verify.** `handbook__read` topic `config:tz` shows the resolved
-zone. Whether a task is actually registered is server-internal state — check
-the `server` log stream (`isaac logs server`) around boot or a config change
-for `:cron/missed-schedule` / any error from the job's turn, and confirm the
-server process is actually running (`isaac.foundation` → Runtime: no CLI
-command runs the scheduler).
+**How to verify.** `isaac config validate` names the job and invalid rule
+part. `isaac cron list` prints each job, its rule or one-shot time, and its
+next run in the install zone. `config get cron.<name>` shows the stored
+intent. Check `isaac logs server` for skipped or expired jobs and failed
+turns.
 
 ### Troubleshooting
 
-- **A job never seems to fire.** Confirm the server process is up — the
-  scheduler only runs inside it. Then check `expr` and `tz` against when you
-  expected it, and check the `server` log for `:cron/missed-schedule` (fired
-  late enough to be skipped) versus no log at all (never reached that time,
-  or the server was down through it).
-- **A job fires at the wrong time.** Almost always `tz` — it's shared across
-  every job in the install, not per-job. `config get tz` shows the current
-  value; unset falls back to the JVM's own zone, which may not be what you
-  expect on a given host.
-- **A job that used to fire has gone quiet after a config edit.** Confirm
-  the entry is still present and valid under `:cron` — `config validate`
-  surfaces a schema problem that would otherwise just drop the task
-  silently on the next reload.
+- **A job never fires.** Check the server is running, `isaac cron list`
+  shows the intended next run, and `isaac config validate` has no errors.
+  A missed recurring window is logged, not replayed.
+- **A one-shot vanished.** Inspect `<root>/cron.edn` `:history` for its
+  final status. Expired one-shots log `:cron/one-shot-expired`.
+- **Wrong time zone.** Check `config get tz`; `tz` is shared, not per-job.
 
 ## Session targeting
 

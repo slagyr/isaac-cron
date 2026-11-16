@@ -35,7 +35,7 @@
         (with-redefs [sut/start! (fn [opts]
                                    (reset! started opts)
                                    ::runner)]
-          (runtime/on-load module {"health-check" {:expr "0 9 * * *"}})
+          (runtime/on-load module {"health-check" {:when "FREQ=DAILY;BYHOUR=9"}})
           (should= {:cfg (or (loader/snapshot "spec") {}) :root "/test/isaac"}
                    @started))))
 
@@ -48,10 +48,10 @@
                                    (keyword (str "runner-" (count @started))))
                       sut/stop!  (fn [runner]
                                    (swap! stopped conj runner))]
-          (runtime/on-load module {"alpha" {:expr "0 9 * * *"}})
+          (runtime/on-load module {"alpha" {:when "FREQ=DAILY;BYHOUR=9"}})
           (runtime/on-config-change! module
-           {"alpha" {:expr "0 9 * * *"}}
-           {"alpha" {:expr "0 10 * * *"}})
+           {"alpha" {:when "FREQ=DAILY;BYHOUR=9"}}
+           {"alpha" {:when "FREQ=DAILY;BYHOUR=10"}})
           (should= [:runner-1] @stopped)
           (should= 2 (count @started)))))
 
@@ -61,9 +61,9 @@
         (with-redefs [sut/start! (fn [_] ::runner)
                       sut/stop!  (fn [runner]
                                    (reset! stopped runner))]
-          (runtime/on-load module {"alpha" {:expr "0 9 * * *"}})
+          (runtime/on-load module {"alpha" {:when "FREQ=DAILY;BYHOUR=9"}})
           (runtime/on-config-change! module
-           {"alpha" {:expr "0 9 * * *"}}
+           {"alpha" {:when "FREQ=DAILY;BYHOUR=9"}}
            nil)
           (should= ::runner @stopped))))
 
@@ -71,7 +71,7 @@
        (let [started (atom 0)
              stopped (atom 0)
              module  (sut/make {:root "/test/isaac"})
-             slice   {"alpha" {:expr "0 9 * * *"}}]
+             slice   {"alpha" {:when "FREQ=DAILY;BYHOUR=9"}}]
         (with-redefs [sut/start! (fn [_]
                                    (swap! started inc)
                                    ::runner)
@@ -90,15 +90,15 @@
     (let [scheduled (atom [])
           fake-scheduler {}
           cfg {:tz "America/Chicago"
-               :cron {"nightly-cleanup" {:expr "0 3 * * *" :crew "main" :prompt "tidy up"}
-                      "heartbeat"       {:expr "*/5 * * * *" :crew "main" :prompt "ping"}}}]
+               :cron {"nightly-cleanup" {:when "FREQ=DAILY;BYHOUR=3" :crew "main" :prompt "tidy up"}
+                      "heartbeat"       {:when "FREQ=HOURLY;BYMINUTE=0,5,10,15,20,25,30,35,40,45,50,55" :crew "main" :prompt "ping"}}}]
       (nexus/register! [:scheduler] fake-scheduler)
       (with-redefs [scheduler-core/schedule! (fn [scheduler task]
                                                (swap! scheduled conj [scheduler (select-keys task [:id :trigger])])
                                                task)]
         (sut/start! {:cfg cfg :root "/test/isaac"}))
-      (should= [[fake-scheduler {:id :cron/heartbeat :trigger {:kind :cron :expr "*/5 * * * *" :zone "America/Chicago"}}]
-                [fake-scheduler {:id :cron/nightly-cleanup :trigger {:kind :cron :expr "0 3 * * *" :zone "America/Chicago"}}]]
+      (should= [[fake-scheduler {:id :cron/heartbeat :trigger {:kind :calendar :rule "FREQ=HOURLY;BYMINUTE=0,5,10,15,20,25,30,35,40,45,50,55" :zone "America/Chicago"}}]
+                [fake-scheduler {:id :cron/nightly-cleanup :trigger {:kind :calendar :rule "FREQ=DAILY;BYHOUR=3" :zone "America/Chicago"}}]]
                @scheduled)))
 
   (it "cancels registered cron tasks on stop"

@@ -9,11 +9,13 @@
     [isaac.agent.llm.api.grover :as grover]
     [isaac.agent.session.store.spi :as store]
     [isaac.cron.service :as cron-service]
+    [isaac.cron.rules :as rules]
     [isaac.foundation.config.loader :as loader]
     [isaac.foundation.fs :as fs]
     [isaac.foundation.fs-steps]
     [isaac.foundation.logger :as log]
     [isaac.foundation.nexus :as nexus]
+    [isaac.foundation.scheduler.calendar]
     [isaac.foundation.scheduler.cron :as cron]
     [isaac.foundation.scheduler.runtime :as scheduler]
     [isaac.foundation.spec-helper :as helper]
@@ -93,8 +95,15 @@
 
 (defn- invoke-scheduled-cron-tasks! [scheduler now]
   (doseq [{:keys [handler trigger]} (scheduler/list-tasks scheduler)]
-    (let [zone         (java.time.ZoneId/of (or (:zone trigger) (str (.getZone now))))
-          scheduled-at (cron/previous-fire-at (:expr trigger) now zone)]
+    (let [zone (java.time.ZoneId/of (or (:zone trigger) (str (.getZone now))))
+          scheduled-at (case (:kind trigger)
+                         :at (java.time.ZonedDateTime/ofInstant (:instant trigger) zone)
+                         :calendar (let [rule (:rule trigger)
+                                         reference (.minusSeconds (.toInstant now) 86400)
+                                         candidate (isaac.foundation.scheduler.calendar/next-fire-at
+                                                     rule (:dtstart trigger) (str zone) reference)]
+                                     (when (and candidate (not (.isAfter candidate (.toInstant now))))
+                                       (java.time.ZonedDateTime/ofInstant candidate zone))))]
       (when scheduled-at
         (handler {:scheduled-at (.toInstant scheduled-at)
                   :now          (.toInstant now)})))))

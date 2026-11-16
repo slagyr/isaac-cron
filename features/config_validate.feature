@@ -6,7 +6,6 @@ Feature: Config Validate (cron entities)
   Background:
     Given an Isaac root at "isaac-state"
 
-  @wip
   Scenario: validate reports unknown crew refs with file and valid set
     Given config file "isaac.edn" containing:
       """

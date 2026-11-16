@@ -1,4 +1,3 @@
-@wip
 Feature: Cron rules — :when (RRULE), :at (one-shot), finite jobs leave
   A cron job says when it runs with :when, an iCalendar RRULE in the
   install :tz (foundation's :calendar trigger), or :at, a one-shot local

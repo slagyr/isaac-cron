@@ -9,7 +9,6 @@ Feature: Cron session frequencies
   Background:
     Given default Grover setup
 
-  @wip
   Scenario: a cron job resumes the most-recent matching session
     Given config:
       | key                      | value                   |
@@ -39,7 +38,6 @@ Feature: Cron session frequencies
     And session "morning" has transcript matching:
       | type    | message.role | message.content |
 
-  @wip
   Scenario: a cron job's with-model override flows to the scheduled turn
     Given config:
       | key                          | value                   |

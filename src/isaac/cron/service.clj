@@ -11,6 +11,8 @@
     [isaac.agent.session.store.spi :as store]
     [isaac.agent.tool.memory :as memory]
     [isaac.cron.state :as state]
+    [isaac.cron.rules :as rules]
+    [isaac.foundation.config.mutate :as mutate]
     [isaac.foundation.config.loader :as loader]
     [isaac.foundation.logger :as log]
     [isaac.foundation.nexus :as nexus]
@@ -18,7 +20,7 @@
     [isaac.foundation.scheduler.cron :as cron]
     [isaac.foundation.scheduler.runtime :as scheduler])
   (:import
-    (java.time ZoneId ZonedDateTime)))
+    (java.time Duration ZoneId ZonedDateTime)))
 
 (def ^:private default-tick-ms 30000)
 
@@ -195,21 +197,39 @@
                                                :last-error  error})
         result))))
 
+(defn- remove-finite! [ctx job-name job now status]
+  (let [root (:root ctx)
+        result (mutate/unset-config root (str "cron." job-name))]
+    (if (= :ok (:status result))
+      (state/archive-job! root job-name job (assoc (get (state/read-state root) job-name)
+                                                 :last-status status
+                                                 :removed-at (cron/format-zoned-date-time now)))
+      (log/error :cron/remove-failed :job job-name :result result))))
+
 (defn- handle-scheduled-job! [ctx cfg tick-ms job-name job {:keys [scheduled-at now]}]
   (let [zone          (zone-id cfg)
         scheduled-zdt (ZonedDateTime/ofInstant scheduled-at zone)
         now-zdt       (normalized-now now zone)]
-    (if (< (cron/late-by-ms scheduled-zdt now-zdt) tick-ms)
-      (try
-        (fire-job! ctx cfg job-name job scheduled-zdt)
-        (catch Exception e
-          (log/ex :cron/job-failed e :job (str job-name))
-          (state/write-job-state! (:root ctx) job-name {:last-run    (cron/format-zoned-date-time scheduled-zdt)
-                                                              :last-status :failed
-                                                              :last-error  (.getMessage e)})))
-      (log/warn :cron/missed-schedule
-                :job (str job-name)
-                :scheduled-at (cron/format-zoned-date-time scheduled-zdt)))))
+    (if (and (:at job)
+             (> (cron/late-by-ms scheduled-zdt now-zdt)
+                (.toMillis ^Duration (rules/window (:late-window job)))))
+      (do (log/warn :cron/one-shot-expired :job job-name)
+          (remove-finite! ctx job-name job now-zdt :expired))
+      (if (or (:at job) (< (cron/late-by-ms scheduled-zdt now-zdt) tick-ms))
+        (do
+          (try
+            (fire-job! ctx cfg job-name job scheduled-zdt)
+            (catch Exception e
+              (log/ex :cron/job-failed e :job job-name)
+              (state/write-job-state! (:root ctx) job-name
+                                      {:last-run (cron/format-zoned-date-time scheduled-zdt)
+                                       :last-status :failed :last-error (.getMessage e)})))
+          (when (and (rules/finite? job)
+                     (or (:at job) (nil? (rules/next-fire job (str zone) scheduled-at))))
+            (remove-finite! ctx job-name job now-zdt
+                            (:last-status (get (state/read-state (:root ctx)) job-name)))))
+        (log/warn :cron/missed-schedule
+                  :job job-name :scheduled-at (cron/format-zoned-date-time scheduled-zdt))))))
 
 (defn start! [{:keys [cfg root session-store tick-ms]
                  :or   {tick-ms default-tick-ms}}]
@@ -220,12 +240,18 @@
         runtime-ctx      {:root root :session-store session-store}
         zone             (str (zone-id cfg))
         task-ids         (reduce (fn [ids [job-name job]]
-                                   (scheduler/schedule! shared-scheduler
-                                                         {:id      (task-id job-name)
-                                                          :trigger {:kind :cron :expr (:expr job) :zone zone}
-                                                          :handler (fn [scheduler-ctx]
-                                                                     (handle-scheduled-job! runtime-ctx cfg tick-ms job-name job scheduler-ctx))})
-                                    (conj ids (task-id job-name)))
+                                   (try
+                                     (rules/validate-job! job zone)
+                                     (scheduler/schedule! shared-scheduler
+                                                          {:id      (task-id job-name)
+                                                           :trigger (rules/trigger job zone)
+                                                           :handler (fn [scheduler-ctx]
+                                                                      (handle-scheduled-job! runtime-ctx cfg tick-ms job-name job scheduler-ctx))})
+                                     (conj ids (task-id job-name))
+                                     (catch Exception e
+                                       (log/error :config/validation-error :key (str "cron." job-name)
+                                                  :message (.getMessage e))
+                                       ids)))
                                   []
                                   (cron-jobs cfg))]
     {:scheduler shared-scheduler

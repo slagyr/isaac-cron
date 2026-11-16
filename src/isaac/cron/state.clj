@@ -39,3 +39,13 @@
      (fs/mkdirs fs* (fs/parent path))
      (fs/spit fs* path (write-edn updated))
      updated)))
+
+(defn archive-job! [root job-name job outcome]
+  (let [fs* (runtime-fs!)
+        path (cron-state-path root)
+        current (read-state root)
+        updated (-> current
+                    (assoc-in [:history (str job-name)] (merge job outcome))
+                    (dissoc (str job-name)))]
+    (fs/spit fs* path (write-edn updated))
+    updated))

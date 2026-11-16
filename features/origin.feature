@@ -5,7 +5,6 @@ Feature: Cron-spawned session origin
   Background:
     Given default Grover setup
 
-  @wip
   Scenario: cron-spawned session carries origin pointing at the cron
     Given config:
       | tz                       | America/Chicago         |

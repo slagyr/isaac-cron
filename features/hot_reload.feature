@@ -6,7 +6,6 @@ Feature: Cron config hot reload
   Background:
     Given default Grover setup
 
-  @wip
   Scenario: Cron prompt content change is picked up at runtime
     Given config:
       | tz                       | America/Chicago                         |

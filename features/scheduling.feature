@@ -17,7 +17,6 @@ Feature: Cron jobs
   Background:
     Given default Grover setup
 
-  @wip
   Scenario: a cron job fires at its schedule and runs a turn with its prompt
     Given config:
       | tz                       | America/Chicago         |
@@ -34,7 +33,6 @@ Feature: Cron jobs
       | message | user         | Run the health checkin. |
       | message | assistant    | Health is good.         |
 
-  @wip
   Scenario: a cron window missed while Isaac was down is skipped silently
     Given config:
       | tz                       | America/Chicago         |
@@ -48,7 +46,6 @@ Feature: Cron jobs
       | level | event                 | job          |
       | warn  | :cron/missed-schedule | health-check |
 
-  @wip
   Scenario: successful cron runs update the isaac file with last-run and last-status
     Given config:
       | tz                       | America/Chicago         |
@@ -65,7 +62,6 @@ Feature: Cron jobs
       | health-check.last-run    | 2026-04-21T09:00:00-0500 |
       | health-check.last-status | succeeded                |
 
-  @wip
   Scenario: cron jobs are registered as scheduler tasks
     Given the isaac EDN file "config/isaac.edn" contains:
       """
@@ -80,7 +76,6 @@ Feature: Cron jobs
       | id                   | trigger.kind | trigger.rule                   | trigger.zone    |
       | cron/nightly-cleanup | calendar     | FREQ=DAILY;BYHOUR=3;BYMINUTE=0 | America/Chicago |
 
-  @wip
   Scenario: removing a cron entry from config cancels its scheduler task
     Given the isaac EDN file "config/isaac.edn" contains:
       """
@@ -100,7 +95,6 @@ Feature: Cron jobs
   # (:unavailable? true, no :error) and other non-error failures therefore
   # write :succeeded. Success means: the turn ended with an assistant reply.
 
-  @wip
   Scenario: a provider wall during a cron turn records failed with the reason (isaac-7ngj)
     Given config:
       | tz                       | America/Chicago         |
@@ -121,7 +115,6 @@ Feature: Cron jobs
       | level | event            | job          | outcome      |
       | :warn | :cron/job-failed | health-check | :unavailable |
 
-  @wip
   Scenario: a provider error during a cron turn records failed with the message (isaac-7ngj)
     Given config:
       | tz                       | America/Chicago         |
@@ -138,7 +131,6 @@ Feature: Cron jobs
       | health-check.last-status | failed                           |
       | health-check.last-error  | #".*upstream provider exploded.*" |
 
-  @wip
   Scenario: a cron turn that produces no assistant reply is not a success (isaac-7ngj)
     Given config:
       | tz                       | America/Chicago         |
@@ -156,7 +148,6 @@ Feature: Cron jobs
       | health-check.last-status | failed                   |
       | health-check.last-error  | #"(?i).*empty.*"         |
 
-  @wip
   Scenario: a successful cron run clears a previous failure (isaac-7ngj)
     Given config:
       | tz                       | America/Chicago         |
