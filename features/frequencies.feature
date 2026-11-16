@@ -9,12 +9,13 @@ Feature: Cron session frequencies
   Background:
     Given default Grover setup
 
+  @wip
   Scenario: a cron job resumes the most-recent matching session
     Given config:
       | key                      | value                   |
       | tz                       | America/Chicago         |
       | sessions.naming-strategy | sequential              |
-      | cron.health-check.expr   | 0 9 * * *               |
+      | cron.health-check.when   | FREQ=DAILY;BYHOUR=9;BYMINUTE=0               |
       | cron.health-check.crew   | main                    |
       | cron.health-check.prompt | Run the health checkin. |
       | cron.health-check.create | if-missing              |
@@ -38,12 +39,13 @@ Feature: Cron session frequencies
     And session "morning" has transcript matching:
       | type    | message.role | message.content |
 
+  @wip
   Scenario: a cron job's with-model override flows to the scheduled turn
     Given config:
       | key                          | value                   |
       | tz                           | America/Chicago         |
       | sessions.naming-strategy     | sequential              |
-      | cron.health-check.expr       | 0 9 * * *               |
+      | cron.health-check.when       | FREQ=DAILY;BYHOUR=9;BYMINUTE=0               |
       | cron.health-check.crew       | main                    |
       | cron.health-check.prompt     | Run the health checkin. |
       | cron.health-check.with-model | grover2                 |

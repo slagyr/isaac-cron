@@ -6,6 +6,7 @@ Feature: Config Validate (cron entities)
   Background:
     Given an Isaac root at "isaac-state"
 
+  @wip
   Scenario: validate reports unknown crew refs with file and valid set
     Given config file "isaac.edn" containing:
       """
@@ -16,7 +17,7 @@ Feature: Config Validate (cron entities)
       """
     And config file "cron/nightly.edn" containing:
       """
-      {:expr "0 9 * * *" :crew :ghost :prompt "Ping"}
+      {:when "FREQ=DAILY;BYHOUR=9;BYMINUTE=0" :crew :ghost :prompt "Ping"}
       """
     When isaac is run with "config validate"
     Then the stderr matches:

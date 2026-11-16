@@ -6,11 +6,12 @@ Feature: Cron config hot reload
   Background:
     Given default Grover setup
 
+  @wip
   Scenario: Cron prompt content change is picked up at runtime
     Given config:
       | tz                       | America/Chicago                         |
       | sessions.naming-strategy | sequential                              |
-      | cron.evening-plan.expr   | 0 21 * * *                              |
+      | cron.evening-plan.when   | FREQ=DAILY;BYHOUR=21;BYMINUTE=0                              |
       | cron.evening-plan.crew   | main                                    |
       | cron.evening-plan.prompt | What are we going to do tonight, Brain? |
     And the following model responses are queued:

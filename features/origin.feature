@@ -5,11 +5,12 @@ Feature: Cron-spawned session origin
   Background:
     Given default Grover setup
 
+  @wip
   Scenario: cron-spawned session carries origin pointing at the cron
     Given config:
       | tz                       | America/Chicago         |
       | sessions.naming-strategy | sequential              |
-      | cron.health-check.expr   | 0 9 * * *               |
+      | cron.health-check.when   | FREQ=DAILY;BYHOUR=9;BYMINUTE=0               |
       | cron.health-check.crew   | main                    |
       | cron.health-check.prompt | Run the health checkin. |
     And the following model responses are queued:

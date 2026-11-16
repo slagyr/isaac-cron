@@ -6,12 +6,13 @@ Feature: Cron delivery to a comm
   Background:
     Given default Grover setup
 
+  @wip
   Scenario: a cron addressed to a comm delivers its report through that comm
     Given config:
       | tz                       | America/Chicago                     |
       | sessions.naming-strategy | sequential                          |
       | comms.longwave.type      | longwave                            |
-      | cron.watch-report.expr   | 0 6 * * *                           |
+      | cron.watch-report.when   | FREQ=DAILY;BYHOUR=6;BYMINUTE=0                           |
       | cron.watch-report.crew   | main                                |
       | cron.watch-report.prompt | File the dawn watch for the bridge. |
       | cron.watch-report.comm   | longwave                            |
@@ -25,11 +26,12 @@ Feature: Cron delivery to a comm
       | to      | content                               |
       | captain | Dawn watch clear; Marigold steady on. |
 
+  @wip
   Scenario: an untargeted cron runs but enqueues no delivery (skybeam/null default)
     Given config:
       | tz                       | America/Chicago               |
       | sessions.naming-strategy | sequential                    |
-      | cron.hull-check.expr     | 0 13 * * *                    |
+      | cron.hull-check.when     | FREQ=DAILY;BYHOUR=13;BYMINUTE=0                    |
       | cron.hull-check.crew     | main                          |
       | cron.hull-check.prompt   | Tally the hull stress gauges. |
     And the following model responses are queued:
