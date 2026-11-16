@@ -143,15 +143,29 @@ Feature: Cron rules — :when (RRULE), :at (one-shot), finite jobs leave
       | cron\.legacy\.expr                            |
     And the exit code is 1
 
-  Scenario: cron list shows each job's rule and its next run
+  @wip
+  Scenario: cron list lines up its columns to the longest name and rule (isaac-y3go)
     Given the isaac EDN file "config/isaac.edn" contains:
       """
       {:tz "America/Chicago"
-       :cron {:standup  {:when "FREQ=WEEKLY;BYDAY=TU,TH;BYHOUR=9;BYMINUTE=0" :crew :main :prompt "Stand-up notes."}
-              :reminder {:at "2026-11-20T09:00:00" :crew :main :prompt "Call the harbor master."}}}
+       :cron {:standup            {:when "FREQ=WEEKLY;BYDAY=TU,TH;BYHOUR=9;BYMINUTE=0" :crew :main :prompt "Stand-up notes."}
+              :reminder           {:at "2026-11-20T09:00:00" :crew :main :prompt "Call the harbor master."}
+              :tempest-vault-sync {:when "FREQ=DAILY;BYHOUR=0;BYMINUTE=0" :crew :main :prompt "Sync the vault."}}}
       """
     And the clock is fixed at "2026-11-16T08:00:00-06:00"
     When isaac is run with "cron list"
-    Then the stdout contains "standup   FREQ=WEEKLY;BYDAY=TU,TH;BYHOUR=9;BYMINUTE=0   next 2026-11-17 09:00 CST"
-    And the stdout contains "reminder  at 2026-11-20T09:00:00                          next 2026-11-20 09:00 CST"
+    Then the stdout contains "NAME                WHEN                                         NEXT"
+    And the stdout contains "reminder            at 2026-11-20T09:00:00                       2026-11-20 09:00 CST"
+    And the stdout contains "standup             FREQ=WEEKLY;BYDAY=TU,TH;BYHOUR=9;BYMINUTE=0  2026-11-17 09:00 CST"
+    And the stdout contains "tempest-vault-sync  FREQ=DAILY;BYHOUR=0;BYMINUTE=0               2026-11-17 00:00 CST"
+    And the exit code is 0
+
+  @wip
+  Scenario: cron list with no jobs says so (isaac-y3go)
+    Given the isaac EDN file "config/isaac.edn" contains:
+      """
+      {:tz "America/Chicago"}
+      """
+    When isaac is run with "cron list"
+    Then the stdout contains "No cron jobs."
     And the exit code is 0
