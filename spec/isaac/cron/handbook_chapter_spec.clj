@@ -8,6 +8,7 @@
    Isaac actually exposes. `<placeholder>` shapes are intentionally
    skipped. Mirrors isaac.foundation.handbook-chapter-spec."
   (:require
+    [clojure.edn :as edn]
     [clojure.java.io :as io]
     [clojure.string :as str]
     [isaac.foundation.config.schema-compose :as schema-compose]
@@ -55,6 +56,13 @@
 (describe "isaac.cron handbook chapter (isaac-lp5y)"
 
   (around [example] (nexus/-with-nexus {:fs (fs/real-fs)} (example)))
+
+  (it "discovers agent model validation through its pinned manifest"
+    (let [manifest (get-in (discovery/builtin-index) [:isaac.agent :manifest])]
+      (should-not-be-nil (get-in manifest [:isaac.config/validation-ref :model-exists?]))
+      (should= (edn/read-string
+                 (slurp (io/resource "isaac-manifest.edn")))
+               (get-in (discovery/builtin-index) [:isaac.cron :manifest]))))
 
   (it "ships at the manifest's declared classpath resource"
     (should-not-be-nil (chapter-text)))

@@ -17,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NO_COLOR: "1"
+      # JVM feature startup plus integration tests exceed the shared 60s per-suite default.
+      ISAAC_TEST_TIMEOUT_MS: "180000"
     steps:
       - name: Check out isaac-cron
         uses: actions/checkout@v4
