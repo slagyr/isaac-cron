@@ -11,13 +11,19 @@
 (def ^:private time-format (DateTimeFormatter/ofPattern "yyyy-MM-dd HH:mm z"))
 
 (defn list-jobs [cfg now]
-  (let [zone (or (:tz cfg) (str (ZoneId/systemDefault)))]
-    (for [[name job] (sort-by (comp str key) (:cron cfg))]
-      (let [label (if-let [rule (:when job)] rule (str "at " (:at job)))
-            next-run (rules/next-fire job zone now)]
-        (str (format "%-10s" (clojure.core/name name)) label
-             (apply str (repeat (if (:at job) 26 3) " ")) "next "
-             (if next-run (.format (ZonedDateTime/ofInstant next-run (ZoneId/of zone)) time-format) "none"))))))
+  (let [zone (or (:tz cfg) (str (ZoneId/systemDefault)))
+        rows (for [[name job] (sort-by (comp str key) (:cron cfg))]
+               (let [label (if-let [rule (:when job)] rule (str "at " (:at job)))
+                     next-run (rules/next-fire job zone now)]
+                 [(clojure.core/name name) label
+                  (if next-run (.format (ZonedDateTime/ofInstant next-run (ZoneId/of zone)) time-format) "none")]))]
+    (if (seq rows)
+      (let [rows (cons ["NAME" "WHEN" "NEXT"] rows)
+            name-width (+ 2 (apply max (map (comp count first) rows)))
+            when-width (+ 2 (apply max (map (comp count second) rows)))]
+        (map (fn [[name label next-run]]
+               (str (format (str "%-" name-width "s%-" when-width "s") name label) next-run)) rows))
+      ["No cron jobs."])))
 
 (defmethod cli/run :cron [_ opts]
   (if (= ["list"] (vec (:_raw-args opts)))

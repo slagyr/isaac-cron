@@ -143,7 +143,6 @@ Feature: Cron rules — :when (RRULE), :at (one-shot), finite jobs leave
       | cron\.legacy\.expr                            |
     And the exit code is 1
 
-  @wip
   Scenario: cron list lines up its columns to the longest name and rule (isaac-y3go)
     Given the isaac EDN file "config/isaac.edn" contains:
       """
@@ -160,7 +159,6 @@ Feature: Cron rules — :when (RRULE), :at (one-shot), finite jobs leave
     And the stdout contains "tempest-vault-sync  FREQ=DAILY;BYHOUR=0;BYMINUTE=0               2026-11-17 00:00 CST"
     And the exit code is 0
 
-  @wip
   Scenario: cron list with no jobs says so (isaac-y3go)
     Given the isaac EDN file "config/isaac.edn" contains:
       """
